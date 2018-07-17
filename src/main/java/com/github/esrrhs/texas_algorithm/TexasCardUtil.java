@@ -185,30 +185,14 @@ public class TexasCardUtil
 		return analyseResult;
 	}
 
-	public static int fiveFromSeven(ArrayList<Poke> handCards, ArrayList<Poke> publicCards, ArrayList<Poke> pickedCards)
+	public static int fiveFromSeven(ArrayList<Poke> cards, ArrayList<Poke> pickedCards)
 	{
-		if (handCards.size() < 2)
-		{
-			return 0;
-		}
-		if (publicCards.size() != 5)
-		{
-			return 0;
-		}
 		if (pickedCards == null)
 		{
 			pickedCards = new ArrayList<>();
 		}
 		pickedCards.clear();
-		ArrayList<Poke> tmpSevenCards = new ArrayList<>();
-		for (Poke poke : handCards)
-		{
-			tmpSevenCards.add(poke);
-		}
-		for (Poke poke : publicCards)
-		{
-			tmpSevenCards.add(poke);
-		}
+		ArrayList<Poke> tmpSevenCards = cards;
 		//对七张牌排序
 		Collections.sort(tmpSevenCards, new TexasPokeLogicValueComparator());
 		//		log.info("after sort. tmpSevenCards:{}", tmpSevenCards);

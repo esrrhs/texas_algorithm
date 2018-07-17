@@ -10,5 +10,6 @@ public class TexasPowerUtil
 	private static void gen()
 	{
 		GenUtil.genKey();
+		GenUtil.outputData();
 	}
 }
