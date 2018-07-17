@@ -29,6 +29,11 @@ public final class Poke implements Cloneable
 	public byte color;
 	public byte value;
 
+	public static String[] huaseName =
+	{ "♦", "♣", "♥", "♠" };
+	public static String[] valueName =
+	{ "", "", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A" };
+
 	public Poke(byte color, byte value)
 	{
 		this.color = color;
@@ -80,7 +85,7 @@ public final class Poke implements Cloneable
 	@Override
 	public String toString()
 	{
-		return String.format("%d:%d", this.color, this.value);
+		return String.format("%s%s", huaseName[this.color], valueName[this.value]);
 	}
 
 	@Override
