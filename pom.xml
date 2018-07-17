@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.github.esrrhs</groupId>
+    <artifactId>texas_algorithm</artifactId>
+    <packaging>jar</packaging>
+    <version>1.0.0</version>
+
+    <parent>
+        <groupId>org.sonatype.oss</groupId>
+        <artifactId>oss-parent</artifactId>
+        <version>7</version>
+    </parent>
+
+
+    <name>texas_algorithm</name>
+    <description>majiang texas_algorithm.</description>
+    <url>https://github.com/esrrhs/texas_algorithm</url>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>esrrhs</name>
+            <email>esrrhs@163.com</email>
+            <url>https://github.com/esrrhs/texas_algorithm</url>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git@github.com:esrrhs/texas_algorithm.git</connection>
+        <developerConnection>scm:git:git@github.com:esrrhs/texas_algorithm.git</developerConnection>
+        <url>git@github.com:esrrhs/texas_algorithm.git</url>
+    </scm>
+
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+</project>
