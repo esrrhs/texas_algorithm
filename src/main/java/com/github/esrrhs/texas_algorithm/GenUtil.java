@@ -110,41 +110,95 @@ public class GenUtil
 			file.createNewFile();
 			out = new FileOutputStream(file, true);
 
-			for (int i = 0; i < keys.size() - 1; i++)
+			//			for (int i = 0; i < keys.size() - 1; i++)
+			//			{
+			//				int min = i;
+			//				for (int j = i + 1; j < keys.size(); j++)
+			//				{
+			//					if (compare(keys.get(j), keys.get(min)))
+			//					{
+			//						min = j;
+			//					}
+			//				}
+			//
+			//				if (min != i)
+			//				{
+			//					long tmp = keys.get(min);
+			//					keys.set(min, keys.get(i));
+			//					keys.set(i, tmp);
+			//				}
+			//
+			//				String str = keys.get(i) + " " + i + " " + keys.size() + " " + toString(keys.get(i)) + " "
+			//						+ max(keys.get(i)) + " " + toString(max(keys.get(i))) + " " + maxType(keys.get(i)) + "\n";
+			//
+			//				out.write(str.getBytes("utf-8"));
+			//
+			//				totalKey++;
+			//				int cur = (int) (totalKey * 100 / total);
+			//				if (cur != lastPrint)
+			//				{
+			//					lastPrint = cur;
+			//
+			//					long now = System.currentTimeMillis();
+			//					float per = (float) (now - beginPrint) / totalKey;
+			//					System.out.println(cur + "% 需要" + per * (total - totalKey) / 60 / 1000 + "分" + " 用时"
+			//							+ (now - beginPrint) / 60 / 1000 + "分" + " 速度"
+			//							+ totalKey / ((float) (now - beginPrint) / 1000) + "条/秒");
+			//				}
+			//			}
+
+			int h = 1;
+			while (h <= keys.size() / 3)
 			{
-				int min = i;
-				for (int j = i + 1; j < keys.size(); j++)
+				h = h * 3 + 1;
+			}
+			while (h > 0)
+			{
+				totalKey = 0;
+				lastPrint = 0;
+				beginPrint = System.currentTimeMillis();
+				int len = (keys.size() - h) / h;
+				len = len != 0 ? len : 1;
+
+				for (int i = h; i < keys.size(); i += h)
 				{
-					if (compare(keys.get(j), keys.get(min)))
+					if (compare(keys.get(i), keys.get(i - h)))
 					{
-						min = j;
+						long tmp = keys.get(i);
+						int j = i - h;
+						while (j >= 0 && !compare(keys.get(j), tmp))
+						{
+							keys.set(j + h, keys.get(j));
+							j -= h;
+						}
+						keys.set(j + h, tmp);
+					}
+
+					totalKey++;
+					int cur = (int) (totalKey * 100 / len);
+					if (cur != lastPrint)
+					{
+						lastPrint = cur;
+
+						long now = System.currentTimeMillis();
+						float per = (float) (now - beginPrint) / totalKey;
+						System.out.println("h " + h + " " + cur + "% 需要" + per * (total - totalKey) / 60 / 1000 + "分"
+								+ " 用时" + (now - beginPrint) / 60 / 1000 + "分" + " 速度"
+								+ totalKey / ((float) (now - beginPrint) / 1000) + "条/秒");
 					}
 				}
+				// 计算出下一个h值
+				h = (h - 1) / 3;
+			}
 
-				if (min != i)
-				{
-					long tmp = keys.get(min);
-					keys.set(min, keys.get(i));
-					keys.set(i, tmp);
-				}
-
-				String str = keys.get(i) + " " + i + " " + keys.size() + " " + toString(keys.get(i)) + " "
-						+ max(keys.get(i)) + " " + toString(max(keys.get(i))) + " " + maxType(keys.get(i)) + "\n";
+			int i = 0;
+			for (Long k : keys)
+			{
+				String str = k + " " + i + " " + keys.size() + " " + toString(keys.get(i)) + " " + max(keys.get(i))
+						+ " " + toString(max(keys.get(i))) + " " + maxType(keys.get(i)) + "\n";
 
 				out.write(str.getBytes("utf-8"));
-
-				totalKey++;
-				int cur = (int) (totalKey * 100 / total);
-				if (cur != lastPrint)
-				{
-					lastPrint = cur;
-
-					long now = System.currentTimeMillis();
-					float per = (float) (now - beginPrint) / totalKey;
-					System.out.println(cur + "% 需要" + per * (total - totalKey) / 60 / 1000 + "分" + " 用时"
-							+ (now - beginPrint) / 60 / 1000 + "分" + " 速度"
-							+ totalKey / ((float) (now - beginPrint) / 1000) + "条/秒");
-				}
+				i++;
 			}
 
 			out.close();
@@ -244,4 +298,5 @@ public class GenUtil
 
 		return TexasCardUtil.compareCards(pickedCards1, pickedCards2) < 0;
 	}
+
 }
