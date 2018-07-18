@@ -152,7 +152,7 @@ public class Sorter
 
 				if (i <= j)
 				{
-					int step = totalStep - (j - i);
+					long step = totalStep - (j - i);
 					step = step > 0 ? step : 0;
 					int cur = (int) (step * 100 / totalStep);
 					if (cur != lastPrint)
