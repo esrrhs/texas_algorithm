@@ -11,10 +11,13 @@ public class GenUtil
 	public static FileOutputStream out;
 	public static int lastPrint = 0;
 	public static long beginPrint;
-	public static final long genNum = 52;
+	public static final long genNum = 24;
 	public static final long total = (genNum * (genNum - 1) * (genNum - 2) * (genNum - 3) * (genNum - 4) * (genNum - 5)
 			* (genNum - 6)) / (7 * 6 * 5 * 4 * 3 * 2);
 	public static ArrayList<Long> keys = new ArrayList<>((int) total);
+	public static ArrayList<Poke> tmp = new ArrayList<>();
+	public static ArrayList<Poke> tmp1 = new ArrayList<>();
+	public static ArrayList<Poke> tmp2 = new ArrayList<>();
 
 	public static void genKey()
 	{
@@ -96,12 +99,9 @@ public class GenUtil
 
 	public static void outputData()
 	{
+		long begin = System.currentTimeMillis();
 		try
 		{
-			totalKey = 0;
-			lastPrint = 0;
-			beginPrint = System.currentTimeMillis();
-
 			File file = new File("texas_data.txt");
 			if (file.exists())
 			{
@@ -110,87 +110,11 @@ public class GenUtil
 			file.createNewFile();
 			out = new FileOutputStream(file, true);
 
-			//			for (int i = 0; i < keys.size() - 1; i++)
-			//			{
-			//				int min = i;
-			//				for (int j = i + 1; j < keys.size(); j++)
-			//				{
-			//					if (compare(keys.get(j), keys.get(min)))
-			//					{
-			//						min = j;
-			//					}
-			//				}
-			//
-			//				if (min != i)
-			//				{
-			//					long tmp = keys.get(min);
-			//					keys.set(min, keys.get(i));
-			//					keys.set(i, tmp);
-			//				}
-			//
-			//				String str = keys.get(i) + " " + i + " " + keys.size() + " " + toString(keys.get(i)) + " "
-			//						+ max(keys.get(i)) + " " + toString(max(keys.get(i))) + " " + maxType(keys.get(i)) + "\n";
-			//
-			//				out.write(str.getBytes("utf-8"));
-			//
-			//				totalKey++;
-			//				int cur = (int) (totalKey * 100 / total);
-			//				if (cur != lastPrint)
-			//				{
-			//					lastPrint = cur;
-			//
-			//					long now = System.currentTimeMillis();
-			//					float per = (float) (now - beginPrint) / totalKey;
-			//					System.out.println(cur + "% 需要" + per * (total - totalKey) / 60 / 1000 + "分" + " 用时"
-			//							+ (now - beginPrint) / 60 / 1000 + "分" + " 速度"
-			//							+ totalKey / ((float) (now - beginPrint) / 1000) + "条/秒");
-			//				}
-			//			}
+			quickSort(0, 0, keys.size() - 1);
 
-			int h = 1;
-			while (h <= keys.size() / 3)
-			{
-				h = h * 3 + 1;
-			}
-			while (h > 0)
-			{
-				totalKey = 0;
-				lastPrint = 0;
-				beginPrint = System.currentTimeMillis();
-				int len = (keys.size() - h) / h;
-				len = len != 0 ? len : 1;
-
-				for (int i = h; i < keys.size(); i += h)
-				{
-					if (compare(keys.get(i), keys.get(i - h)))
-					{
-						long tmp = keys.get(i);
-						int j = i - h;
-						while (j >= 0 && !compare(keys.get(j), tmp))
-						{
-							keys.set(j + h, keys.get(j));
-							j -= h;
-						}
-						keys.set(j + h, tmp);
-					}
-
-					totalKey++;
-					int cur = (int) (totalKey * 100 / len);
-					if (cur != lastPrint)
-					{
-						lastPrint = cur;
-
-						long now = System.currentTimeMillis();
-						float per = (float) (now - beginPrint) / totalKey;
-						System.out.println("h " + h + " " + cur + "% 需要" + per * (total - totalKey) / 60 / 1000 + "分"
-								+ " 用时" + (now - beginPrint) / 60 / 1000 + "分" + " 速度"
-								+ totalKey / ((float) (now - beginPrint) / 1000) + "条/秒");
-					}
-				}
-				// 计算出下一个h值
-				h = (h - 1) / 3;
-			}
-
+			totalKey = 0;
+			lastPrint = 0;
+			beginPrint = System.currentTimeMillis();
 			int i = 0;
 			for (Long k : keys)
 			{
@@ -199,11 +123,25 @@ public class GenUtil
 
 				out.write(str.getBytes("utf-8"));
 				i++;
+				totalKey++;
+
+				int cur = (int) (totalKey * 100 / total);
+				if (cur != lastPrint)
+				{
+					lastPrint = cur;
+
+					long now = System.currentTimeMillis();
+					float per = (float) (now - beginPrint) / totalKey;
+					System.out.println(cur + "% 需要" + per * (total - totalKey) / 60 / 1000 + "分" + " 用时"
+							+ (now - beginPrint) / 60 / 1000 + "分" + " 速度"
+							+ totalKey / ((float) (now - beginPrint) / 1000) + "条/秒");
+				}
 			}
 
 			out.close();
 
-			System.out.println("outputData finish " + total);
+			System.out.println(
+					"outputData finish " + total + " time:" + (System.currentTimeMillis() - begin) / 1000 / 60 + "分");
 		}
 		catch (Exception e)
 		{
@@ -211,9 +149,73 @@ public class GenUtil
 		}
 	}
 
+	private static void quickSort(int layer, int lowerIndex, int higherIndex)
+	{
+		int i = lowerIndex;
+		int j = higherIndex;
+		// calculate pivot number, I am taking pivot as middle index number
+		long pivot = keys.get(lowerIndex + (higherIndex - lowerIndex) / 2);
+		// Divide into two arrays
+
+		int totalStep = j - i;
+		totalStep = totalStep == 0 ? 1 : totalStep;
+		lastPrint = 0;
+		beginPrint = System.currentTimeMillis();
+
+		while (i <= j)
+		{
+			/**
+			 * In each iteration, we will identify a number from left side which
+			 * is greater then the pivot value, and also we will identify a number
+			 * from right side which is less then the pivot value. Once the search
+			 * is done, then we exchange both numbers.
+			 */
+			while (compare(keys.get(i), pivot))
+			{
+				i++;
+			}
+			while (compare(pivot, keys.get(j)))
+			{
+				j--;
+			}
+			if (i <= j)
+			{
+				long temp = keys.get(i);
+				keys.set(i, keys.get(j));
+				keys.set(j, temp);
+				//move index to next position on both sides
+				i++;
+				j--;
+			}
+
+			if (i <= j)
+			{
+				int step = totalStep - (j - i);
+				step = step > 0 ? step : 0;
+				int cur = (int) (step * 100 / totalStep);
+				if (cur != lastPrint)
+				{
+					lastPrint = cur;
+
+					long now = System.currentTimeMillis();
+					float per = (float) (now - beginPrint) / step;
+					System.out.println(layer + "/" + (int) Math.log(total) + "层 " + cur + "% 需要"
+							+ per * (totalStep - step) / 60 / 1000 + "分" + " 用时" + (now - beginPrint) / 60 / 1000 + "分"
+							+ " 速度" + step / ((float) (now - beginPrint) / 1000) + "条/秒");
+				}
+			}
+		}
+		// call quickSort() method recursively
+		if (lowerIndex < j)
+			quickSort(layer + 1, lowerIndex, j);
+		if (i < higherIndex)
+			quickSort(layer + 1, i, higherIndex);
+	}
+
 	public static long max(long k)
 	{
-		ArrayList<Poke> cs = new ArrayList<>();
+		tmp.clear();
+		ArrayList<Poke> cs = tmp;
 		cs.add(new Poke((byte) (k % 100000000000000L / 1000000000000L)));
 		cs.add(new Poke((byte) (k % 1000000000000L / 10000000000L)));
 		cs.add(new Poke((byte) (k % 10000000000L / 100000000L)));
@@ -221,7 +223,8 @@ public class GenUtil
 		cs.add(new Poke((byte) (k % 1000000L / 10000L)));
 		cs.add(new Poke((byte) (k % 10000L / 100L)));
 		cs.add(new Poke((byte) (k % 100L / 1L)));
-		ArrayList<Poke> pickedCards1 = new ArrayList<>();
+		tmp1.clear();
+		ArrayList<Poke> pickedCards1 = tmp1;
 		TexasCardUtil.fiveFromSeven(cs, pickedCards1);
 
 		long ret = 0;
@@ -234,7 +237,8 @@ public class GenUtil
 
 	public static int maxType(long k)
 	{
-		ArrayList<Poke> cs = new ArrayList<>();
+		tmp.clear();
+		ArrayList<Poke> cs = tmp;
 		cs.add(new Poke((byte) (k % 100000000000000L / 1000000000000L)));
 		cs.add(new Poke((byte) (k % 1000000000000L / 10000000000L)));
 		cs.add(new Poke((byte) (k % 10000000000L / 100000000L)));
@@ -242,7 +246,8 @@ public class GenUtil
 		cs.add(new Poke((byte) (k % 1000000L / 10000L)));
 		cs.add(new Poke((byte) (k % 10000L / 100L)));
 		cs.add(new Poke((byte) (k % 100L / 1L)));
-		ArrayList<Poke> pickedCards1 = new ArrayList<>();
+		tmp1.clear();
+		ArrayList<Poke> pickedCards1 = tmp1;
 		TexasCardUtil.fiveFromSeven(cs, pickedCards1);
 
 		return TexasCardUtil.getCardTypeUnordered(pickedCards1);
@@ -250,7 +255,8 @@ public class GenUtil
 
 	public static String toString(long k)
 	{
-		ArrayList<Poke> cs = new ArrayList<>();
+		tmp.clear();
+		ArrayList<Poke> cs = tmp;
 		if (k > 1000000000000L)
 		{
 			cs.add(new Poke((byte) (k % 100000000000000L / 1000000000000L)));
@@ -274,7 +280,8 @@ public class GenUtil
 
 	public static boolean compare(long k1, long k2)
 	{
-		ArrayList<Poke> cs1 = new ArrayList<>();
+		tmp.clear();
+		ArrayList<Poke> cs1 = tmp;
 		cs1.add(new Poke((byte) (k1 % 100000000000000L / 1000000000000L)));
 		cs1.add(new Poke((byte) (k1 % 1000000000000L / 10000000000L)));
 		cs1.add(new Poke((byte) (k1 % 10000000000L / 100000000L)));
@@ -282,10 +289,12 @@ public class GenUtil
 		cs1.add(new Poke((byte) (k1 % 1000000L / 10000L)));
 		cs1.add(new Poke((byte) (k1 % 10000L / 100L)));
 		cs1.add(new Poke((byte) (k1 % 100L / 1L)));
-		ArrayList<Poke> pickedCards1 = new ArrayList<>();
+		tmp1.clear();
+		ArrayList<Poke> pickedCards1 = tmp1;
 		TexasCardUtil.fiveFromSeven(cs1, pickedCards1);
 
-		ArrayList<Poke> cs2 = new ArrayList<>();
+		tmp.clear();
+		ArrayList<Poke> cs2 = tmp;
 		cs2.add(new Poke((byte) (k2 % 100000000000000L / 1000000000000L)));
 		cs2.add(new Poke((byte) (k2 % 1000000000000L / 10000000000L)));
 		cs2.add(new Poke((byte) (k2 % 10000000000L / 100000000L)));
@@ -293,7 +302,8 @@ public class GenUtil
 		cs2.add(new Poke((byte) (k2 % 1000000L / 10000L)));
 		cs2.add(new Poke((byte) (k2 % 10000L / 100L)));
 		cs2.add(new Poke((byte) (k2 % 100L / 1L)));
-		ArrayList<Poke> pickedCards2 = new ArrayList<>();
+		tmp2.clear();
+		ArrayList<Poke> pickedCards2 = tmp2;
 		TexasCardUtil.fiveFromSeven(cs2, pickedCards2);
 
 		return TexasCardUtil.compareCards(pickedCards1, pickedCards2) < 0;
