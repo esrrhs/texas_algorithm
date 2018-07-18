@@ -113,6 +113,29 @@ public class Sorter
 		 */
 		private void quicksort(int layer, int lowerIndex, int higherIndex)
 		{
+			if (higherIndex < lowerIndex)
+			{
+				return;
+			}
+			if (higherIndex == lowerIndex)
+			{
+				GenUtil.progress.getAndAdd(1);
+
+				int step = GenUtil.progress.intValue();
+				int cur = (int) ((long) step * 10000 / GenUtil.total);
+				if (cur != GenUtil.lastPrint)
+				{
+					GenUtil.lastPrint = cur;
+
+					long now = System.currentTimeMillis();
+					float per = (float) (now - GenUtil.beginPrint) / step;
+					System.out.println(cur + "%% 需要" + per * (GenUtil.total - step) / 60 / 1000 + "分" + " 用时"
+							+ (now - GenUtil.beginPrint) / 60 / 1000 + "分" + " 速度"
+							+ step / ((float) (now - GenUtil.beginPrint) / 1000) + "条/秒");
+				}
+				return;
+			}
+
 			int i = lowerIndex;
 			int j = higherIndex;
 			// calculate pivot number, I am taking pivot as middle index number
@@ -150,7 +173,7 @@ public class Sorter
 					j--;
 				}
 
-				if (i <= j)
+				if (i <= j && totalStep > 100000)
 				{
 					long step = totalStep - (j - i);
 					step = step > 0 ? step : 0;
@@ -170,20 +193,32 @@ public class Sorter
 			// call quickSort() method recursively
 			if (count.get() >= FALLBACK * N_THREADS)
 			{
-				if (lowerIndex < j)
+				if (i - j == 1)
+				{
 					quicksort(layer + 1, lowerIndex, j);
-				if (i < higherIndex)
 					quicksort(layer + 1, i, higherIndex);
+				}
+				else
+				{
+					quicksort(layer + 1, lowerIndex, j + 1);
+					quicksort(layer + 1, i, higherIndex);
+				}
 			}
 			else
 			{
-				if (lowerIndex < j)
+				if (i - j == 1)
 				{
 					count.getAndAdd(1);
 					pool.execute(new QuicksortRunnable<T>(values, lowerIndex, j, count, layer + 1, total));
+
+					count.getAndAdd(1);
+					pool.execute(new QuicksortRunnable<T>(values, i, higherIndex, count, layer + 1, total));
 				}
-				if (i < higherIndex)
+				else
 				{
+					count.getAndAdd(1);
+					pool.execute(new QuicksortRunnable<T>(values, lowerIndex, j + 1, count, layer + 1, total));
+
 					count.getAndAdd(1);
 					pool.execute(new QuicksortRunnable<T>(values, i, higherIndex, count, layer + 1, total));
 				}

@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class GenUtil
 {
@@ -15,6 +16,7 @@ public class GenUtil
 	public static final long total = (genNum * (genNum - 1) * (genNum - 2) * (genNum - 3) * (genNum - 4) * (genNum - 5)
 			* (genNum - 6)) / (7 * 6 * 5 * 4 * 3 * 2);
 	public static ArrayList<Long> keys = new ArrayList<>((int) total);
+	public static AtomicInteger progress = new AtomicInteger();
 
 	public static void genKey()
 	{
@@ -107,6 +109,8 @@ public class GenUtil
 			file.createNewFile();
 			out = new FileOutputStream(file, true);
 
+			beginPrint = System.currentTimeMillis();
+			lastPrint = 0;
 			//quickSort(0, 0, keys.size() - 1);
 			Sorter.quicksort(keys);
 
@@ -138,8 +142,8 @@ public class GenUtil
 
 			out.close();
 
-			System.out.println(
-					"outputData finish " + total + " time:" + (System.currentTimeMillis() - begin) / 1000 / 60 + "分");
+			System.out.println("outputData finish " + total + " time:"
+					+ (System.currentTimeMillis() - begin) / 1000 / 60 + "分 " + GenUtil.progress);
 		}
 		catch (Exception e)
 		{
