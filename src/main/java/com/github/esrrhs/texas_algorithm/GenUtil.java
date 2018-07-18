@@ -11,13 +11,10 @@ public class GenUtil
 	public static FileOutputStream out;
 	public static int lastPrint = 0;
 	public static long beginPrint;
-	public static final long genNum = 52;
+	public static final long genNum = 20;
 	public static final long total = (genNum * (genNum - 1) * (genNum - 2) * (genNum - 3) * (genNum - 4) * (genNum - 5)
 			* (genNum - 6)) / (7 * 6 * 5 * 4 * 3 * 2);
 	public static ArrayList<Long> keys = new ArrayList<>((int) total);
-	public static ArrayList<Poke> tmp = new ArrayList<>();
-	public static ArrayList<Poke> tmp1 = new ArrayList<>();
-	public static ArrayList<Poke> tmp2 = new ArrayList<>();
 
 	public static void genKey()
 	{
@@ -110,7 +107,8 @@ public class GenUtil
 			file.createNewFile();
 			out = new FileOutputStream(file, true);
 
-			quickSort(0, 0, keys.size() - 1);
+			//quickSort(0, 0, keys.size() - 1);
+			Sorter.quicksort(keys);
 
 			totalKey = 0;
 			lastPrint = 0;
@@ -214,8 +212,7 @@ public class GenUtil
 
 	public static long max(long k)
 	{
-		tmp.clear();
-		ArrayList<Poke> cs = tmp;
+		ArrayList<Poke> cs = new ArrayList<>();
 		cs.add(new Poke((byte) (k % 100000000000000L / 1000000000000L)));
 		cs.add(new Poke((byte) (k % 1000000000000L / 10000000000L)));
 		cs.add(new Poke((byte) (k % 10000000000L / 100000000L)));
@@ -223,8 +220,7 @@ public class GenUtil
 		cs.add(new Poke((byte) (k % 1000000L / 10000L)));
 		cs.add(new Poke((byte) (k % 10000L / 100L)));
 		cs.add(new Poke((byte) (k % 100L / 1L)));
-		tmp1.clear();
-		ArrayList<Poke> pickedCards1 = tmp1;
+		ArrayList<Poke> pickedCards1 = new ArrayList<>();
 		TexasCardUtil.fiveFromSeven(cs, pickedCards1);
 
 		long ret = 0;
@@ -237,8 +233,7 @@ public class GenUtil
 
 	public static int maxType(long k)
 	{
-		tmp.clear();
-		ArrayList<Poke> cs = tmp;
+		ArrayList<Poke> cs = new ArrayList<>();
 		cs.add(new Poke((byte) (k % 100000000000000L / 1000000000000L)));
 		cs.add(new Poke((byte) (k % 1000000000000L / 10000000000L)));
 		cs.add(new Poke((byte) (k % 10000000000L / 100000000L)));
@@ -246,8 +241,7 @@ public class GenUtil
 		cs.add(new Poke((byte) (k % 1000000L / 10000L)));
 		cs.add(new Poke((byte) (k % 10000L / 100L)));
 		cs.add(new Poke((byte) (k % 100L / 1L)));
-		tmp1.clear();
-		ArrayList<Poke> pickedCards1 = tmp1;
+		ArrayList<Poke> pickedCards1 = new ArrayList<>();
 		TexasCardUtil.fiveFromSeven(cs, pickedCards1);
 
 		return TexasCardUtil.getCardTypeUnordered(pickedCards1);
@@ -255,8 +249,7 @@ public class GenUtil
 
 	public static String toString(long k)
 	{
-		tmp.clear();
-		ArrayList<Poke> cs = tmp;
+		ArrayList<Poke> cs = new ArrayList<>();
 		if (k > 1000000000000L)
 		{
 			cs.add(new Poke((byte) (k % 100000000000000L / 1000000000000L)));
@@ -280,8 +273,7 @@ public class GenUtil
 
 	public static boolean compare(long k1, long k2)
 	{
-		tmp.clear();
-		ArrayList<Poke> cs1 = tmp;
+		ArrayList<Poke> cs1 = new ArrayList<>();
 		cs1.add(new Poke((byte) (k1 % 100000000000000L / 1000000000000L)));
 		cs1.add(new Poke((byte) (k1 % 1000000000000L / 10000000000L)));
 		cs1.add(new Poke((byte) (k1 % 10000000000L / 100000000L)));
@@ -289,12 +281,10 @@ public class GenUtil
 		cs1.add(new Poke((byte) (k1 % 1000000L / 10000L)));
 		cs1.add(new Poke((byte) (k1 % 10000L / 100L)));
 		cs1.add(new Poke((byte) (k1 % 100L / 1L)));
-		tmp1.clear();
-		ArrayList<Poke> pickedCards1 = tmp1;
+		ArrayList<Poke> pickedCards1 = new ArrayList<>();
 		TexasCardUtil.fiveFromSeven(cs1, pickedCards1);
 
-		tmp.clear();
-		ArrayList<Poke> cs2 = tmp;
+		ArrayList<Poke> cs2 = new ArrayList<>();
 		cs2.add(new Poke((byte) (k2 % 100000000000000L / 1000000000000L)));
 		cs2.add(new Poke((byte) (k2 % 1000000000000L / 10000000000L)));
 		cs2.add(new Poke((byte) (k2 % 10000000000L / 100000000L)));
@@ -302,8 +292,7 @@ public class GenUtil
 		cs2.add(new Poke((byte) (k2 % 1000000L / 10000L)));
 		cs2.add(new Poke((byte) (k2 % 10000L / 100L)));
 		cs2.add(new Poke((byte) (k2 % 100L / 1L)));
-		tmp2.clear();
-		ArrayList<Poke> pickedCards2 = tmp2;
+		ArrayList<Poke> pickedCards2 = new ArrayList<>();
 		TexasCardUtil.fiveFromSeven(cs2, pickedCards2);
 
 		return TexasCardUtil.compareCards(pickedCards1, pickedCards2) < 0;
