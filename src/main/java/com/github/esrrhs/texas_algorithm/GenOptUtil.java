@@ -27,6 +27,7 @@ public class GenOptUtil
 	{
 		try
 		{
+			total = 1;
 			for (int i = 0; i < N; i++)
 			{
 				total = total * (genNum - i);
@@ -37,6 +38,9 @@ public class GenOptUtil
 			}
 			beginPrint = System.currentTimeMillis();
 			keys.clear();
+			totalKey = 0;
+			lastPrint = 0;
+
 			genCard();
 
 			System.out.println("genKey finish " + total);
