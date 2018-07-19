@@ -1,12 +1,10 @@
 package com.github.esrrhs.texas_algorithm;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
 
 public class GenOptUtil
 {
@@ -17,7 +15,13 @@ public class GenOptUtil
 	public static final long genNum = 52;
 	public static int N = 6;
 	public static long total = 1;
-	public static HashMap<Long, Long> keys = new HashMap<>();
+	public static HashMap<Long, KeyData> keys = new HashMap<>();
+
+	public static class KeyData
+	{
+		public long win;
+		public long num;
+	}
 
 	public static void genKey()
 	{
@@ -79,7 +83,7 @@ public class GenOptUtil
 	{
 		final long c = GenUtil.genCardBind(tmp);
 
-		keys.put(c, 0L);
+		keys.put(c, new KeyData());
 		totalKey++;
 
 		int cur = (int) (totalKey * 100 / total);
@@ -89,9 +93,9 @@ public class GenOptUtil
 
 			long now = System.currentTimeMillis();
 			float per = (float) (now - beginPrint) / totalKey;
-			System.out.println(
-					cur + "% 需要" + per * (total - totalKey) / 60 / 1000 + "分" + " 用时" + (now - beginPrint) / 60 / 1000
-							+ "分" + " 速度" + totalKey / ((float) (now - beginPrint) / 1000) + "条/秒");
+			System.out.println("N" + N + " " + cur + "% 需要" + per * (total - totalKey) / 60 / 1000 + "分" + " 用时"
+					+ (now - beginPrint) / 60 / 1000 + "分" + " 速度" + totalKey / ((float) (now - beginPrint) / 1000)
+					+ "条/秒");
 		}
 	}
 
@@ -102,17 +106,99 @@ public class GenOptUtil
 			FileInputStream inputStream = new FileInputStream("texas_data.txt");
 			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 
-			int total = 0;
+			File file = new File("texas_data_" + N + ".txt");
+			if (file.exists())
+			{
+				file.delete();
+			}
+			file.createNewFile();
+			out = new FileOutputStream(file, true);
+
+			totalKey = 0;
+			lastPrint = 0;
+			beginPrint = System.currentTimeMillis();
+
 			String str = null;
 			while ((str = bufferedReader.readLine()) != null)
 			{
-				total++;
+				long key = Long.parseLong(str.split(" ")[0]);
+				long win = Long.parseLong(str.split(" ")[1]);
+				ArrayList<Long> tmp = getKeyList(key);
+				for (Long l : tmp)
+				{
+					KeyData keyData = keys.get(l);
+					keyData.win += win;
+					keyData.num++;
+				}
+
+				totalKey++;
+
+				int cur = (int) (totalKey * 100 / GenUtil.total);
+				if (cur != lastPrint)
+				{
+					lastPrint = cur;
+
+					long now = System.currentTimeMillis();
+					float per = (float) (now - beginPrint) / totalKey;
+					System.out.println("N" + N + " " + cur + "% 需要" + per * (GenUtil.total - totalKey) / 60 / 1000 + "分"
+							+ " 用时" + (now - beginPrint) / 60 / 1000 + "分" + " 速度"
+							+ totalKey / ((float) (now - beginPrint) / 1000) + "条/秒");
+				}
 			}
-			System.out.println(total);
+
+			out.close();
+
+			for (Map.Entry<Long, KeyData> e : keys.entrySet())
+			{
+				long key = e.getKey();
+				double win = (double) e.getValue().win / e.getValue().num / e.getValue().num;
+			}
+
+			System.out.println("transData finish " + totalKey);
 		}
 		catch (Exception e)
 		{
 			e.printStackTrace();
 		}
 	}
+
+	public static ArrayList<Long> getKeyList(long key) throws Exception
+	{
+		ArrayList<Long> ret = new ArrayList<>();
+		ArrayList<Integer> list = new ArrayList<>();
+		while (key > 100)
+		{
+			list.add((int) (key % 100));
+			key = key / 100;
+		}
+		list.add((int) (key));
+		Collections.sort(list);
+
+		int[] tmp = new int[N];
+		permutationKey(ret, list, 0, 0, N, tmp);
+
+		return ret;
+	}
+
+	public static void permutationKey(ArrayList<Long> ret, ArrayList<Integer> a, int count, int count2, int except,
+			int[] tmp) throws Exception
+	{
+		if (count2 == except)
+		{
+			long c = GenUtil.genCardBind(tmp);
+			if (!ret.contains(c))
+			{
+				ret.add(c);
+			}
+		}
+		else
+		{
+			for (int i = count; i < a.size(); i++)
+			{
+				tmp[count2] = a.get(i);
+				permutationKey(ret, a, i + 1, count2 + 1, except, tmp);
+			}
+		}
+	}
+
 }
