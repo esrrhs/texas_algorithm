@@ -1,7 +1,6 @@
 package com.github.esrrhs.texas_algorithm;
 
-import java.io.File;
-import java.io.FileOutputStream;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -86,7 +85,7 @@ public class GenUtil
 		}
 	}
 
-	private static long genCardBind(int[] tmp)
+	public static long genCardBind(int[] tmp)
 	{
 		long ret = 0;
 		for (Integer i : tmp)
@@ -149,69 +148,6 @@ public class GenUtil
 		{
 			e.printStackTrace();
 		}
-	}
-
-	private static void quickSort(int layer, int lowerIndex, int higherIndex)
-	{
-		int i = lowerIndex;
-		int j = higherIndex;
-		// calculate pivot number, I am taking pivot as middle index number
-		long pivot = keys.get(lowerIndex + (higherIndex - lowerIndex) / 2);
-		// Divide into two arrays
-
-		int totalStep = j - i;
-		totalStep = totalStep == 0 ? 1 : totalStep;
-		lastPrint = 0;
-		beginPrint = System.currentTimeMillis();
-
-		while (i <= j)
-		{
-			/**
-			 * In each iteration, we will identify a number from left side which
-			 * is greater then the pivot value, and also we will identify a number
-			 * from right side which is less then the pivot value. Once the search
-			 * is done, then we exchange both numbers.
-			 */
-			while (compare(keys.get(i), pivot))
-			{
-				i++;
-			}
-			while (compare(pivot, keys.get(j)))
-			{
-				j--;
-			}
-			if (i <= j)
-			{
-				long temp = keys.get(i);
-				keys.set(i, keys.get(j));
-				keys.set(j, temp);
-				//move index to next position on both sides
-				i++;
-				j--;
-			}
-
-			if (i <= j)
-			{
-				int step = totalStep - (j - i);
-				step = step > 0 ? step : 0;
-				int cur = (int) (step * 100 / totalStep);
-				if (cur != lastPrint)
-				{
-					lastPrint = cur;
-
-					long now = System.currentTimeMillis();
-					float per = (float) (now - beginPrint) / step;
-					System.out.println(layer + "/" + (int) Math.log(total) + "层 " + cur + "% 需要"
-							+ per * (totalStep - step) / 60 / 1000 + "分" + " 用时" + (now - beginPrint) / 60 / 1000 + "分"
-							+ " 速度" + step / ((float) (now - beginPrint) / 1000) + "条/秒");
-				}
-			}
-		}
-		// call quickSort() method recursively
-		if (lowerIndex < j)
-			quickSort(layer + 1, lowerIndex, j);
-		if (i < higherIndex)
-			quickSort(layer + 1, i, higherIndex);
 	}
 
 	public static long max(long k)
