@@ -118,25 +118,48 @@ public class GenUtil
 			lastPrint = 0;
 			beginPrint = System.currentTimeMillis();
 			int i = 0;
+			int index = 0;
+			long lastMax = 0;
 			for (Long k : keys)
 			{
-				String str = k + " " + i + " " + keys.size() + " " + toString(keys.get(i)) + " " + max(keys.get(i))
-						+ " " + toString(max(keys.get(i))) + " " + maxType(keys.get(i)) + "\n";
+				long curMax = max(keys.get(index));
+				String str;
+				if (lastMax == 0)
+				{
+					str = k + " " + i + " " + keys.size() + " " + toString(keys.get(index)) + " " + toString(curMax)
+							+ " " + maxType(keys.get(index)) + "\n";
+					lastMax = curMax;
+				}
+				else
+				{
+					if (equal(lastMax, curMax))
+					{
+						str = k + " " + i + " " + keys.size() + " " + toString(keys.get(index)) + " " + toString(curMax)
+								+ " " + maxType(keys.get(index)) + "\n";
+						lastMax = curMax;
+					}
+					else
+					{
+						i++;
+						str = k + " " + i + " " + keys.size() + " " + toString(keys.get(index)) + " " + toString(curMax)
+								+ " " + maxType(keys.get(index)) + "\n";
+						lastMax = curMax;
+					}
+				}
 
 				out.write(str.getBytes("utf-8"));
-				i++;
-				totalKey++;
+				index++;
 
-				int cur = (int) (totalKey * 100 / total);
+				int cur = (int) (index * 100 / total);
 				if (cur != lastPrint)
 				{
 					lastPrint = cur;
 
 					long now = System.currentTimeMillis();
-					float per = (float) (now - beginPrint) / totalKey;
-					System.out.println(cur + "% 需要" + per * (total - totalKey) / 60 / 1000 + "分" + " 用时"
-							+ (now - beginPrint) / 60 / 1000 + "分" + " 速度"
-							+ totalKey / ((float) (now - beginPrint) / 1000) + "条/秒");
+					float per = (float) (now - beginPrint) / index;
+					System.out.println(cur + "% 需要" + per * (total - index) / 60 / 1000 + "分" + " 用时"
+							+ (now - beginPrint) / 60 / 1000 + "分" + " 速度" + index / ((float) (now - beginPrint) / 1000)
+							+ "条/秒");
 				}
 			}
 
@@ -254,4 +277,29 @@ public class GenUtil
 		return TexasCardUtil.compareCards(pickedCards1, pickedCards2) < 0;
 	}
 
+	public static boolean equal(long k1, long k2)
+	{
+		ArrayList<Poke> cs1 = new ArrayList<>();
+		cs1.add(new Poke((byte) (k1 % 10000000000L / 100000000L)));
+		cs1.add(new Poke((byte) (k1 % 100000000L / 1000000L)));
+		cs1.add(new Poke((byte) (k1 % 1000000L / 10000L)));
+		cs1.add(new Poke((byte) (k1 % 10000L / 100L)));
+		cs1.add(new Poke((byte) (k1 % 100L / 1L)));
+
+		ArrayList<Poke> cs2 = new ArrayList<>();
+		cs2.add(new Poke((byte) (k2 % 10000000000L / 100000000L)));
+		cs2.add(new Poke((byte) (k2 % 100000000L / 1000000L)));
+		cs2.add(new Poke((byte) (k2 % 1000000L / 10000L)));
+		cs2.add(new Poke((byte) (k2 % 10000L / 100L)));
+		cs2.add(new Poke((byte) (k2 % 100L / 1L)));
+
+		return TexasCardUtil.compareCards(cs1, cs2) == 0;
+	}
+
+	public static void main(String[] args)
+	{
+		System.out.println(toString(5336520318L));
+		System.out.println(toString(504520351L));
+		System.out.println(equal(5336520318L, 504520351L));
+	}
 }

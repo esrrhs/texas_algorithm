@@ -7,7 +7,7 @@ public class TexasPowerUtil
 	public static void main(String[] args)
 	{
 		gen();
-		genOpt();
+		//genOpt();
 	}
 
 	private static void gen()
