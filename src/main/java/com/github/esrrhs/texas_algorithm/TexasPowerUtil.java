@@ -16,6 +16,6 @@ public class TexasPowerUtil
 	private static void genOpt()
 	{
 		GenOptUtil.genKey();
-		//GenOptUtil.transData();
+		GenOptUtil.transData();
 	}
 }
