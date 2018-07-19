@@ -4,12 +4,18 @@ public class TexasPowerUtil
 {
 	public static void main(String[] args)
 	{
-		gen();
+		genOpt();
 	}
 
 	private static void gen()
 	{
 		GenUtil.genKey();
 		GenUtil.outputData();
+	}
+
+	private static void genOpt()
+	{
+		GenOptUtil.genKey();
+		//GenOptUtil.transData();
 	}
 }
