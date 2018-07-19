@@ -15,7 +15,11 @@ public class TexasPowerUtil
 
 	private static void genOpt()
 	{
-		GenOptUtil.genKey();
-		GenOptUtil.transData();
+		for (int i = 2; i <= 7; i++)
+		{
+			GenOptUtil.N = i;
+			GenOptUtil.genKey();
+			GenOptUtil.transData();
+		}
 	}
 }
