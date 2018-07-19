@@ -12,7 +12,7 @@ public class GenOptUtil
 	public static FileOutputStream out;
 	public static int lastPrint = 0;
 	public static long beginPrint;
-	public static final long genNum = 52;
+	public static final long genNum = GenUtil.genNum;
 	public static int N = 6;
 	public static long total = 1;
 	public static HashMap<Long, KeyData> keys = new HashMap<>();
@@ -36,7 +36,7 @@ public class GenOptUtil
 				total = total / i;
 			}
 			beginPrint = System.currentTimeMillis();
-
+			keys.clear();
 			genCard();
 
 			System.out.println("genKey finish " + total);
@@ -146,13 +146,16 @@ public class GenOptUtil
 				}
 			}
 
-			out.close();
-
 			for (Map.Entry<Long, KeyData> e : keys.entrySet())
 			{
 				long key = e.getKey();
-				double win = (double) e.getValue().win / e.getValue().num / e.getValue().num;
+				double win = (double) e.getValue().win / e.getValue().num / GenUtil.total;
+
+				String tmp = key + " " + win + " " + GenUtil.toString(key) + "\n";
+				out.write(tmp.getBytes("utf-8"));
 			}
+
+			out.close();
 
 			System.out.println("transData finish " + totalKey);
 		}

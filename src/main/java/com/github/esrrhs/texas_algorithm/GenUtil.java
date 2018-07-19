@@ -1,6 +1,7 @@
 package com.github.esrrhs.texas_algorithm;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -198,11 +199,26 @@ public class GenUtil
 		{
 			cs.add(new Poke((byte) (k % 1000000000000L / 10000000000L)));
 		}
-		cs.add(new Poke((byte) (k % 10000000000L / 100000000L)));
-		cs.add(new Poke((byte) (k % 100000000L / 1000000L)));
-		cs.add(new Poke((byte) (k % 1000000L / 10000L)));
-		cs.add(new Poke((byte) (k % 10000L / 100L)));
-		cs.add(new Poke((byte) (k % 100L / 1L)));
+		if (k > 100000000L)
+		{
+			cs.add(new Poke((byte) (k % 10000000000L / 100000000L)));
+		}
+		if (k > 1000000L)
+		{
+			cs.add(new Poke((byte) (k % 100000000L / 1000000L)));
+		}
+		if (k > 10000L)
+		{
+			cs.add(new Poke((byte) (k % 1000000L / 10000L)));
+		}
+		if (k > 100L)
+		{
+			cs.add(new Poke((byte) (k % 10000L / 100L)));
+		}
+		if (k > 1L)
+		{
+			cs.add(new Poke((byte) (k % 100L / 1L)));
+		}
 		String ret = "";
 		for (Poke poke : cs)
 		{
