@@ -38,15 +38,17 @@ public class GenOptUtil
 				String[] params = str.split(" ");
 				long key = Long.parseLong(params[0]);
 				long i = Long.parseLong(params[1]);
-				long max = Long.parseLong(params[2]);
-				String keystr = params[3];
-				String maxstr = params[4];
-				long maxType = Long.parseLong(params[5]);
+				long index = Long.parseLong(params[2]);
+				long total = Long.parseLong(params[3]);
+				String keystr = params[4];
+				long max = Long.parseLong(params[5]);
+				String maxstr = params[6];
+				long maxType = Long.parseLong(params[7]);
 				if (maxType == TexasCardUtil.TEXAS_CARD_TYPE_TONGHUA
 						|| maxType == TexasCardUtil.TEXAS_CARD_TYPE_TONGHUASHUN
 						|| maxType == TexasCardUtil.TEXAS_CARD_TYPE_KINGTONGHUASHUN)
 				{
-					str = key + " " + i + " " + max + " " + keystr + " " + maxstr + " " + maxType + "\n";
+					str = key + " " + i + " " + index + " " + keystr + " " + max + " " + maxstr + " " + maxType + "\n";
 					out.write(str.getBytes("utf-8"));
 				}
 
@@ -101,10 +103,12 @@ public class GenOptUtil
 				String[] params = str.split(" ");
 				long key = Long.parseLong(params[0]);
 				long i = Long.parseLong(params[1]);
-				long max = Long.parseLong(params[2]);
-				String keystr = params[3];
-				String maxstr = params[4];
-				long maxType = Long.parseLong(params[5]);
+				long index = Long.parseLong(params[2]);
+				long total = Long.parseLong(params[3]);
+				String keystr = params[4];
+				long max = Long.parseLong(params[5]);
+				String maxstr = params[6];
+				long maxType = Long.parseLong(params[7]);
 				long removeKey = removeColor(key);
 				if (!(maxType == TexasCardUtil.TEXAS_CARD_TYPE_TONGHUA
 						|| maxType == TexasCardUtil.TEXAS_CARD_TYPE_TONGHUASHUN
@@ -112,7 +116,8 @@ public class GenOptUtil
 				{
 					if (lastKey != removeKey && !keys.contains(removeKey))
 					{
-						str = removeKey + " " + i + " " + max + " " + keystr + " " + maxstr + " " + maxType + "\n";
+						str = removeKey + " " + i + " " + index + " " + keystr + " " + max + " " + maxstr + " "
+								+ maxType + "\n";
 						out.write(str.getBytes("utf-8"));
 						lastKey = removeKey;
 						keys.add(removeKey);
