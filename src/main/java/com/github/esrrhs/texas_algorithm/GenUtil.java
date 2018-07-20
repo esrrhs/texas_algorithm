@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class GenUtil
@@ -90,6 +91,16 @@ public class GenUtil
 	{
 		long ret = 0;
 		for (Integer i : tmp)
+		{
+			ret = ret * 100 + i;
+		}
+		return ret;
+	}
+
+	public static long genCardBind(List<Byte> tmp)
+	{
+		long ret = 0;
+		for (Byte i : tmp)
 		{
 			ret = ret * 100 + i;
 		}
