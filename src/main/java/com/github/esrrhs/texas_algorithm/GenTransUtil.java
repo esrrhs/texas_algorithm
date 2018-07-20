@@ -160,6 +160,7 @@ public class GenTransUtil
 			}
 
 			out.close();
+			keys.clear();
 
 			System.out.println("transData finish " + totalKey);
 		}

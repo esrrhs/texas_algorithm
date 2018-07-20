@@ -170,6 +170,8 @@ public class GenUtil
 
 			System.out.println("outputData finish " + total + " time:"
 					+ (System.currentTimeMillis() - begin) / 1000 / 60 + "分 " + GenUtil.progress);
+
+			keys.clear();
 		}
 		catch (Exception e)
 		{
