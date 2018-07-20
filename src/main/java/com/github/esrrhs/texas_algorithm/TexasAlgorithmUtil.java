@@ -2,12 +2,13 @@ package com.github.esrrhs.texas_algorithm;
 
 import java.io.File;
 
-public class TexasPowerUtil
+public class TexasAlgorithmUtil
 {
 	public static void main(String[] args)
 	{
 		gen();
 		genOpt();
+		genTrans();
 	}
 
 	private static void gen()
@@ -27,12 +28,21 @@ public class TexasPowerUtil
 		{
 			GenOptUtil.optNormalData();
 			GenOptUtil.optColorData();
-//			for (int i = 2; i <= 7; i++)
-//			{
-//				GenOptUtil.N = i;
-//				GenOptUtil.genKey();
-//				GenOptUtil.transData();
-//			}
 		}
 	}
+
+	private static void genTrans()
+	{
+		File file = new File("texas_data.txt");
+		if (file.exists())
+		{
+			for (int i = 6; i >= 2; i--)
+			{
+				GenTransUtil.N = i;
+				GenTransUtil.genKey();
+				GenTransUtil.transData();
+			}
+		}
+	}
+
 }

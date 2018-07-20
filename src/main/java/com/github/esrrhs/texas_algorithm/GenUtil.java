@@ -12,7 +12,7 @@ public class GenUtil
 	public static FileOutputStream out;
 	public static int lastPrint = 0;
 	public static long beginPrint;
-	public static final long genNum = 52;
+	public static final long genNum = 12;
 	public static final long total = (genNum * (genNum - 1) * (genNum - 2) * (genNum - 3) * (genNum - 4) * (genNum - 5)
 			* (genNum - 6)) / (7 * 6 * 5 * 4 * 3 * 2);
 	public static ArrayList<Long> keys = new ArrayList<>((int) total);
@@ -118,6 +118,7 @@ public class GenUtil
 			lastPrint = 0;
 			beginPrint = System.currentTimeMillis();
 			int i = 0;
+			long iindex = 0;
 			long index = 0;
 			long lastMax = 0;
 			for (Long k : keys)
@@ -126,23 +127,25 @@ public class GenUtil
 				String str;
 				if (lastMax == 0)
 				{
-					str = k + " " + i + " " + keys.size() + " " + toString(keys.get((int) index)) + " "
-							+ toString(curMax) + " " + maxType(keys.get((int) index)) + "\n";
+					str = k + " " + i + " " + iindex + " " + keys.size() + " " + toString(keys.get((int) index)) + " "
+							+ curMax + " " + toString(curMax) + " " + maxType(keys.get((int) index)) + "\n";
 					lastMax = curMax;
+					iindex = index;
 				}
 				else
 				{
 					if (equal(lastMax, curMax))
 					{
-						str = k + " " + i + " " + keys.size() + " " + toString(keys.get((int) index)) + " "
-								+ toString(curMax) + " " + maxType(keys.get((int) index)) + "\n";
+						str = k + " " + i + " " + index + " " + keys.size() + " " + toString(keys.get((int) index))
+								+ " " + curMax + " " + toString(curMax) + " " + maxType(keys.get((int) index)) + "\n";
 						lastMax = curMax;
 					}
 					else
 					{
 						i++;
-						str = k + " " + i + " " + keys.size() + " " + toString(keys.get((int) index)) + " "
-								+ toString(curMax) + " " + maxType(keys.get((int) index)) + "\n";
+						iindex = index;
+						str = k + " " + i + " " + index + " " + keys.size() + " " + toString(keys.get((int) index))
+								+ " " + curMax + " " + toString(curMax) + " " + maxType(keys.get((int) index)) + "\n";
 						lastMax = curMax;
 					}
 				}
