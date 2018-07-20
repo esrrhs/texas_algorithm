@@ -122,7 +122,7 @@ public class GenUtil
 
 			beginPrint = System.currentTimeMillis();
 			lastPrint = 0;
-			//quickSort(0, 0, keys.size() - 1);
+
 			Sorter.quicksort(keys);
 
 			totalKey = 0;
