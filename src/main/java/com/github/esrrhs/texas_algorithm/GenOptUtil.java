@@ -95,6 +95,7 @@ public class GenOptUtil
 			totalKey = 0;
 			lastPrint = 0;
 			beginPrint = System.currentTimeMillis();
+			keys.clear();
 
 			String str = null;
 			long lastKey = 0;
@@ -140,6 +141,7 @@ public class GenOptUtil
 			}
 
 			out.close();
+			keys.clear();
 
 			System.out.println("optData finish " + totalKey);
 		}
