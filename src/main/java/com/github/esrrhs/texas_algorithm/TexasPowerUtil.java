@@ -7,7 +7,7 @@ public class TexasPowerUtil
 	public static void main(String[] args)
 	{
 		gen();
-		//genOpt();
+		genOpt();
 	}
 
 	private static void gen()
@@ -25,12 +25,14 @@ public class TexasPowerUtil
 		File file = new File("texas_data.txt");
 		if (file.exists())
 		{
-			for (int i = 2; i <= 7; i++)
-			{
-				GenOptUtil.N = i;
-				GenOptUtil.genKey();
-				GenOptUtil.transData();
-			}
+			GenOptUtil.optNormalData();
+			GenOptUtil.optColorData();
+//			for (int i = 2; i <= 7; i++)
+//			{
+//				GenOptUtil.N = i;
+//				GenOptUtil.genKey();
+//				GenOptUtil.transData();
+//			}
 		}
 	}
 }
