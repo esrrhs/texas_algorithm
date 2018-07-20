@@ -10,6 +10,12 @@ public class TexasAlgorithmUtil
 {
 	public static class KeyData
 	{
+		public KeyData(int index, int postion)
+		{
+			this.index = index;
+			this.postion = postion;
+		}
+
 		private int index;
 		private int postion;
 
@@ -74,7 +80,7 @@ public class TexasAlgorithmUtil
 		{
 			FileInputStream inputStream = new FileInputStream("texas_data_color.txt");
 			loadColor(inputStream);
-			FileInputStream inputStream1 = new FileInputStream("texas_data_color.txt");
+			FileInputStream inputStream1 = new FileInputStream("texas_data_normal.txt");
 			loadNormal(inputStream1);
 		}
 		catch (Exception e)
@@ -87,23 +93,37 @@ public class TexasAlgorithmUtil
 	{
 		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 
+		normalMap.clear();
 		String str = null;
 		while ((str = bufferedReader.readLine()) != null)
 		{
 			String[] params = str.split(" ");
 			long key = Long.parseLong(params[0]);
-			long i = Long.parseLong(params[1]);
-			long index = Long.parseLong(params[2]);
-			long total = Long.parseLong(params[3]);
-			long max = Long.parseLong(params[5]);
+			int i = Integer.parseInt(params[1]);
+			int index = Integer.parseInt(params[2]);
 
+			KeyData keyData = new KeyData(index, i);
+			normalMap.put(key, keyData);
 		}
+		bufferedReader.close();
 	}
 
 	public static void loadColor(InputStream inputStream) throws Exception
 	{
 		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+		colorMap.clear();
+		String str = null;
+		while ((str = bufferedReader.readLine()) != null)
+		{
+			String[] params = str.split(" ");
+			long key = Long.parseLong(params[0]);
+			int i = Integer.parseInt(params[1]);
+			int index = Integer.parseInt(params[2]);
 
+			KeyData keyData = new KeyData(index, i);
+			colorMap.put(key, keyData);
+		}
+		bufferedReader.close();
 	}
 
 	public static byte strToPokeValue(String str)
@@ -213,19 +233,19 @@ public class TexasAlgorithmUtil
 		KeyData normal = normalMap.get(normalKey);
 		if (color == null)
 		{
-			return (double)normal.getIndex() / GenUtil.total;
+			return (double) normal.getIndex() / GenUtil.total;
 		}
 		if (normal == null)
 		{
-			return (double)normal.getIndex() / GenUtil.total;
+			return (double) normal.getIndex() / GenUtil.total;
 		}
 		if (color.getIndex() > normal.getIndex())
 		{
-			return (double)color.getIndex() / GenUtil.total;
+			return (double) color.getIndex() / GenUtil.total;
 		}
 		else
 		{
-			return (double)normal.getIndex() / GenUtil.total;
+			return (double) normal.getIndex() / GenUtil.total;
 		}
 	}
 }
