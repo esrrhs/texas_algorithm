@@ -118,31 +118,31 @@ public class GenUtil
 			lastPrint = 0;
 			beginPrint = System.currentTimeMillis();
 			int i = 0;
-			int index = 0;
+			long index = 0;
 			long lastMax = 0;
 			for (Long k : keys)
 			{
-				long curMax = max(keys.get(index));
+				long curMax = max(keys.get((int) index));
 				String str;
 				if (lastMax == 0)
 				{
-					str = k + " " + i + " " + keys.size() + " " + toString(keys.get(index)) + " " + toString(curMax)
-							+ " " + maxType(keys.get(index)) + "\n";
+					str = k + " " + i + " " + keys.size() + " " + toString(keys.get((int) index)) + " "
+							+ toString(curMax) + " " + maxType(keys.get((int) index)) + "\n";
 					lastMax = curMax;
 				}
 				else
 				{
 					if (equal(lastMax, curMax))
 					{
-						str = k + " " + i + " " + keys.size() + " " + toString(keys.get(index)) + " " + toString(curMax)
-								+ " " + maxType(keys.get(index)) + "\n";
+						str = k + " " + i + " " + keys.size() + " " + toString(keys.get((int) index)) + " "
+								+ toString(curMax) + " " + maxType(keys.get((int) index)) + "\n";
 						lastMax = curMax;
 					}
 					else
 					{
 						i++;
-						str = k + " " + i + " " + keys.size() + " " + toString(keys.get(index)) + " " + toString(curMax)
-								+ " " + maxType(keys.get(index)) + "\n";
+						str = k + " " + i + " " + keys.size() + " " + toString(keys.get((int) index)) + " "
+								+ toString(curMax) + " " + maxType(keys.get((int) index)) + "\n";
 						lastMax = curMax;
 					}
 				}
