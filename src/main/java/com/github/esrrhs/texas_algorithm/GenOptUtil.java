@@ -48,7 +48,8 @@ public class GenOptUtil
 						|| maxType == TexasCardUtil.TEXAS_CARD_TYPE_TONGHUASHUN
 						|| maxType == TexasCardUtil.TEXAS_CARD_TYPE_KINGTONGHUASHUN)
 				{
-					str = key + " " + i + " " + index + " " + keystr + " " + max + " " + maxstr + " " + maxType + "\n";
+					str = key + " " + i + " " + index + " " + total + " " + keystr + " " + max + " " + maxstr + " "
+							+ maxType + "\n";
 					out.write(str.getBytes("utf-8"));
 				}
 
@@ -117,8 +118,8 @@ public class GenOptUtil
 				{
 					if (lastKey != removeKey && !keys.contains(removeKey))
 					{
-						str = removeKey + " " + i + " " + index + " " + keystr + " " + max + " " + maxstr + " "
-								+ maxType + "\n";
+						str = removeKey + " " + i + " " + index + " " + total + " " + keystr + " " + max + " " + maxstr
+								+ " " + maxType + "\n";
 						out.write(str.getBytes("utf-8"));
 						lastKey = removeKey;
 						keys.add(removeKey);
