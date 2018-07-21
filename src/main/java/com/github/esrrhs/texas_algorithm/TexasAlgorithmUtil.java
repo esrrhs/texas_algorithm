@@ -169,19 +169,19 @@ public class TexasAlgorithmUtil
 
 	public static byte strToPoke(String str)
 	{
-		if (str.startsWith("♦"))
+		if (str.startsWith("方"))
 		{
 			return (new Poke(Poke.PokeColor_FANG, strToPokeValue(str.substring(1)))).toByte();
 		}
-		else if (str.startsWith("♣"))
+		else if (str.startsWith("梅"))
 		{
 			return (new Poke(Poke.PokeColor_MEI, strToPokeValue(str.substring(1)))).toByte();
 		}
-		else if (str.startsWith("♥"))
+		else if (str.startsWith("红"))
 		{
 			return (new Poke(Poke.PokeColor_HONG, strToPokeValue(str.substring(1)))).toByte();
 		}
-		else if (str.startsWith("♠"))
+		else if (str.startsWith("黑"))
 		{
 			return (new Poke(Poke.PokeColor_HEI, strToPokeValue(str.substring(1)))).toByte();
 		}

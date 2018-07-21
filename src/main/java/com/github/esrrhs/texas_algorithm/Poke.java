@@ -30,7 +30,7 @@ public final class Poke implements Cloneable
 	public byte value;
 
 	public static String[] huaseName =
-	{ "♦", "♣", "♥", "♠" };
+	{ "方", "梅", "红", "黑" };
 	public static String[] valueName =
 	{ "", "", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A" };
 
