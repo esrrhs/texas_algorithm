@@ -126,7 +126,7 @@ public class GenTransUtil
 			while ((str = bufferedReader.readLine()) != null)
 			{
 				long key = Long.parseLong(str.split(" ")[0]);
-				long win = Long.parseLong(str.split(" ")[1]);
+				long win = Long.parseLong(str.split(" ")[2]);
 				ArrayList<Long> tmp = getKeyList(key);
 				for (Long l : tmp)
 				{
