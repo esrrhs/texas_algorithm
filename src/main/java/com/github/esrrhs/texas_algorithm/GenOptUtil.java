@@ -31,8 +31,10 @@ public class GenOptUtil
 			totalKey = 0;
 			lastPrint = 0;
 			beginPrint = System.currentTimeMillis();
+			keys.clear();
 
 			String str = null;
+			long lastKey = 0;
 			while ((str = bufferedReader.readLine()) != null)
 			{
 				String[] params = str.split(" ");
@@ -44,13 +46,22 @@ public class GenOptUtil
 				long max = Long.parseLong(params[5]);
 				String maxstr = params[6];
 				long maxType = Long.parseLong(params[7]);
+
 				if (maxType == TexasCardUtil.TEXAS_CARD_TYPE_TONGHUA
 						|| maxType == TexasCardUtil.TEXAS_CARD_TYPE_TONGHUASHUN
 						|| maxType == TexasCardUtil.TEXAS_CARD_TYPE_KINGTONGHUASHUN)
 				{
-					str = key + " " + i + " " + index + " " + total + " " + keystr + " " + max + " " + maxstr + " "
-							+ maxType + "\n";
-					out.write(str.getBytes("utf-8"));
+					long colorKey = changeColor(key);
+
+					if (lastKey != colorKey && !keys.contains(colorKey))
+					{
+						str = colorKey + " " + i + " " + index + " " + total + " " + GenUtil.toString(colorKey) + " "
+								+ GenUtil.max(colorKey) + " " + GenUtil.toString(GenUtil.max(colorKey)) + " " + maxType
+								+ "\n";
+						out.write(str.getBytes("utf-8"));
+						lastKey = colorKey;
+						keys.add(colorKey);
+					}
 				}
 
 				totalKey++;
@@ -171,6 +182,51 @@ public class GenOptUtil
 			ret = ret * 100 + p;
 		}
 		return ret;
+	}
+
+	public static long changeColor(long k)
+	{
+		ArrayList<Poke> cs = new ArrayList<>();
+		cs.add(new Poke((byte) (k % 100000000000000L / 1000000000000L)));
+		cs.add(new Poke((byte) (k % 1000000000000L / 10000000000L)));
+		cs.add(new Poke((byte) (k % 10000000000L / 100000000L)));
+		cs.add(new Poke((byte) (k % 100000000L / 1000000L)));
+		cs.add(new Poke((byte) (k % 1000000L / 10000L)));
+		cs.add(new Poke((byte) (k % 10000L / 100L)));
+		cs.add(new Poke((byte) (k % 100L / 1L)));
+
+		int[] color = new int[4];
+		for (Poke poke : cs)
+		{
+			color[poke.getColor()]++;
+		}
+
+		int maxColor = 0;
+		for (int i = 0; i < color.length; i++)
+		{
+			if (color[i] >= 5)
+			{
+				maxColor = i;
+			}
+		}
+
+		ArrayList<Byte> cs1 = new ArrayList<>();
+		for (Poke poke : cs)
+		{
+			if (poke.getColor() == maxColor)
+			{
+				poke.setColor(Poke.PokeColor_HEI);
+			}
+			else
+			{
+				poke.setColor(Poke.PokeColor_FANG);
+			}
+			cs1.add(poke.toByte());
+		}
+
+		Collections.sort(cs1);
+
+		return GenUtil.genCardBind(cs1);
 	}
 
 }

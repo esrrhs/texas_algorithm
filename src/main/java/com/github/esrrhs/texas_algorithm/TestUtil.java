@@ -5,8 +5,11 @@ public class TestUtil
 	public static void main(String[] args)
 	{
 		TexasAlgorithmUtil.load();
-		System.out.println(TexasAlgorithmUtil.getWinPosition("♦3,♣3,♥2,♥3,♥4,♠3,♠4"));
-		System.out.println(TexasAlgorithmUtil.getWinProbability("♦3,♣3,♥2,♥3,♥4,♠3,♠4"));
+		String cards = "♦6,♣3,♠2,♠3,♠4,♠5,♠6";
+		System.out.println(TexasAlgorithmUtil.getWinPosition(cards));
+		System.out.println(TexasAlgorithmUtil.getWinProbability(cards));
+		System.out.println(TexasAlgorithmUtil.keyToStr(TexasAlgorithmUtil.getWinMax(cards)));
+		System.out.println(TexasAlgorithmUtil.getWinType(cards));
 	}
 
 }
