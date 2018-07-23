@@ -21,7 +21,6 @@ public class GenTransUtil
 	{
 		public long win;
 		public long num;
-		public long[] data = new long[100];
 	}
 
 	public static void genKey()
@@ -134,8 +133,6 @@ public class GenTransUtil
 					KeyData keyData = keys.get(l);
 					keyData.win += win;
 					keyData.num++;
-					int index = (int) (win * 100 / GenUtil.total);
-					keyData.data[index] += win;
 				}
 
 				totalKey++;
@@ -160,10 +157,6 @@ public class GenTransUtil
 
 				String tmp = key + " " + e.getValue().win + " " + e.getValue().num + " " + win + " "
 						+ GenUtil.toString(key);
-				for (Long l : e.getValue().data)
-				{
-					tmp = tmp + " " + l;
-				}
 				tmp += "\n";
 				out.write(tmp.getBytes("utf-8"));
 			}
