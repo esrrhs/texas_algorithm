@@ -150,15 +150,30 @@ public class GenTransUtil
 				}
 			}
 
+			totalKey = 0;
+			lastPrint = 0;
+			beginPrint = System.currentTimeMillis();
+
 			for (Map.Entry<Long, KeyData> e : keys.entrySet())
 			{
 				long key = e.getKey();
 				double win = (double) e.getValue().win / e.getValue().num / GenUtil.total;
 
-				String tmp = key + " " + e.getValue().win + " " + e.getValue().num + " " + win + " "
-						+ GenUtil.toString(key);
-				tmp += "\n";
+				String tmp = key + " " + win + "\n";
 				out.write(tmp.getBytes("utf-8"));
+				totalKey++;
+
+				int cur = (int) (totalKey * 100 / GenUtil.total);
+				if (cur != lastPrint)
+				{
+					lastPrint = cur;
+
+					long now = System.currentTimeMillis();
+					float per = (float) (now - beginPrint) / totalKey;
+					System.out.println("N" + N + " " + cur + "% 需要" + per * (GenUtil.total - totalKey) / 60 / 1000 + "分"
+							+ " 用时" + (now - beginPrint) / 60 / 1000 + "分" + " 速度"
+							+ totalKey / ((float) (now - beginPrint) / 1000) + "条/秒");
+				}
 			}
 
 			out.close();
