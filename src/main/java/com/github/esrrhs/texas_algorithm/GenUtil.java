@@ -18,6 +18,7 @@ public class GenUtil
 			* (genNum - 6)) / (7 * 6 * 5 * 4 * 3 * 2);
 	public static ArrayList<Long> keys = new ArrayList<>((int) total);
 	public static AtomicInteger progress = new AtomicInteger();
+	public static boolean useOpt = true;
 
 	public static void genKey()
 	{
@@ -112,6 +113,10 @@ public class GenUtil
 		long begin = System.currentTimeMillis();
 		try
 		{
+			if (useOpt)
+			{
+				TexasAlgorithmUtil.load();
+			}
 			File file = new File("texas_data.txt");
 			if (file.exists())
 			{
@@ -268,29 +273,36 @@ public class GenUtil
 
 	public static boolean compare(long k1, long k2)
 	{
-		ArrayList<Poke> cs1 = new ArrayList<>();
-		cs1.add(new Poke((byte) (k1 % 100000000000000L / 1000000000000L)));
-		cs1.add(new Poke((byte) (k1 % 1000000000000L / 10000000000L)));
-		cs1.add(new Poke((byte) (k1 % 10000000000L / 100000000L)));
-		cs1.add(new Poke((byte) (k1 % 100000000L / 1000000L)));
-		cs1.add(new Poke((byte) (k1 % 1000000L / 10000L)));
-		cs1.add(new Poke((byte) (k1 % 10000L / 100L)));
-		cs1.add(new Poke((byte) (k1 % 100L / 1L)));
-		ArrayList<Poke> pickedCards1 = new ArrayList<>();
-		TexasCardUtil.fiveFromSeven(cs1, pickedCards1);
+		if (useOpt)
+		{
+			return TexasAlgorithmUtil.compare(k1, k2) < 0;
+		}
+		else
+		{
+			ArrayList<Poke> cs1 = new ArrayList<>();
+			cs1.add(new Poke((byte) (k1 % 100000000000000L / 1000000000000L)));
+			cs1.add(new Poke((byte) (k1 % 1000000000000L / 10000000000L)));
+			cs1.add(new Poke((byte) (k1 % 10000000000L / 100000000L)));
+			cs1.add(new Poke((byte) (k1 % 100000000L / 1000000L)));
+			cs1.add(new Poke((byte) (k1 % 1000000L / 10000L)));
+			cs1.add(new Poke((byte) (k1 % 10000L / 100L)));
+			cs1.add(new Poke((byte) (k1 % 100L / 1L)));
+			ArrayList<Poke> pickedCards1 = new ArrayList<>();
+			TexasCardUtil.fiveFromSeven(cs1, pickedCards1);
 
-		ArrayList<Poke> cs2 = new ArrayList<>();
-		cs2.add(new Poke((byte) (k2 % 100000000000000L / 1000000000000L)));
-		cs2.add(new Poke((byte) (k2 % 1000000000000L / 10000000000L)));
-		cs2.add(new Poke((byte) (k2 % 10000000000L / 100000000L)));
-		cs2.add(new Poke((byte) (k2 % 100000000L / 1000000L)));
-		cs2.add(new Poke((byte) (k2 % 1000000L / 10000L)));
-		cs2.add(new Poke((byte) (k2 % 10000L / 100L)));
-		cs2.add(new Poke((byte) (k2 % 100L / 1L)));
-		ArrayList<Poke> pickedCards2 = new ArrayList<>();
-		TexasCardUtil.fiveFromSeven(cs2, pickedCards2);
+			ArrayList<Poke> cs2 = new ArrayList<>();
+			cs2.add(new Poke((byte) (k2 % 100000000000000L / 1000000000000L)));
+			cs2.add(new Poke((byte) (k2 % 1000000000000L / 10000000000L)));
+			cs2.add(new Poke((byte) (k2 % 10000000000L / 100000000L)));
+			cs2.add(new Poke((byte) (k2 % 100000000L / 1000000L)));
+			cs2.add(new Poke((byte) (k2 % 1000000L / 10000L)));
+			cs2.add(new Poke((byte) (k2 % 10000L / 100L)));
+			cs2.add(new Poke((byte) (k2 % 100L / 1L)));
+			ArrayList<Poke> pickedCards2 = new ArrayList<>();
+			TexasCardUtil.fiveFromSeven(cs2, pickedCards2);
 
-		return TexasCardUtil.compareCards(pickedCards1, pickedCards2) < 0;
+			return TexasCardUtil.compareCards(pickedCards1, pickedCards2) < 0;
+		}
 	}
 
 	public static boolean equal(long k1, long k2)

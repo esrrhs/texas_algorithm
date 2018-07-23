@@ -34,7 +34,6 @@ public class GenOptUtil
 			keys.clear();
 
 			String str = null;
-			long lastKey = 0;
 			while ((str = bufferedReader.readLine()) != null)
 			{
 				String[] params = str.split(" ");
@@ -53,13 +52,12 @@ public class GenOptUtil
 				{
 					long colorKey = changeColor(key);
 
-					if (lastKey != colorKey && !keys.contains(colorKey))
+					if (!keys.contains(colorKey))
 					{
 						str = colorKey + " " + i + " " + index + " " + total + " " + GenUtil.toString(colorKey) + " "
 								+ GenUtil.max(colorKey) + " " + GenUtil.toString(GenUtil.max(colorKey)) + " " + maxType
 								+ "\n";
 						out.write(str.getBytes("utf-8"));
-						lastKey = colorKey;
 						keys.add(colorKey);
 					}
 				}
@@ -110,7 +108,6 @@ public class GenOptUtil
 			keys.clear();
 
 			String str = null;
-			long lastKey = 0;
 			while ((str = bufferedReader.readLine()) != null)
 			{
 				String[] params = str.split(" ");
@@ -127,12 +124,11 @@ public class GenOptUtil
 						|| maxType == TexasCardUtil.TEXAS_CARD_TYPE_TONGHUASHUN
 						|| maxType == TexasCardUtil.TEXAS_CARD_TYPE_KINGTONGHUASHUN))
 				{
-					if (lastKey != removeKey && !keys.contains(removeKey))
+					if (!keys.contains(removeKey))
 					{
 						str = removeKey + " " + i + " " + index + " " + total + " " + keystr + " " + max + " " + maxstr
 								+ " " + maxType + "\n";
 						out.write(str.getBytes("utf-8"));
-						lastKey = removeKey;
 						keys.add(removeKey);
 					}
 				}
