@@ -50,7 +50,7 @@ public class TexasAlgorithmUtil
 	{
 		gen();
 		genOpt();
-		genTrans();
+		//genTrans();
 	}
 
 	private static void gen()
@@ -327,5 +327,34 @@ public class TexasAlgorithmUtil
 			return 0;
 		}
 		return keyData.getType();
+	}
+
+	public static int compare(String str1, String str2)
+	{
+		return compare(strToPokes(str1), strToPokes(str2));
+	}
+
+	public static int compare(List<Byte> bytes1, List<Byte> bytes2)
+	{
+		return compare(GenUtil.genCardBind(bytes1), GenUtil.genCardBind(bytes2));
+	}
+
+	public static int compare(long k1, long k2)
+	{
+		KeyData keyData1 = getKeyData(k1);
+		KeyData keyData2 = getKeyData(k2);
+		if (keyData1 == null && keyData2 == null)
+		{
+			return 0;
+		}
+		if (keyData1 == null)
+		{
+			return -1;
+		}
+		if (keyData2 == null)
+		{
+			return 1;
+		}
+		return keyData1.getPostion() - keyData2.getPostion();
 	}
 }
