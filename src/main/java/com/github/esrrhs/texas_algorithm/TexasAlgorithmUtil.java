@@ -50,7 +50,7 @@ public class TexasAlgorithmUtil
 	{
 		gen();
 		genOpt();
-		//genTrans();
+		genTrans();
 	}
 
 	private static void gen()
