@@ -45,12 +45,14 @@ public class TexasAlgorithmUtil
 
 	public static ConcurrentHashMap<Long, KeyData> colorMap = new ConcurrentHashMap<>();
 	public static ConcurrentHashMap<Long, KeyData> normalMap = new ConcurrentHashMap<>();
+	public static ConcurrentHashMap<Long, Double>[] probilityMap = new ConcurrentHashMap[7];
 
 	public static void main(String[] args)
 	{
 		gen();
 		genOpt();
 		genTrans();
+		genTransOpt();
 	}
 
 	private static void gen()
@@ -82,9 +84,30 @@ public class TexasAlgorithmUtil
 		{
 			for (int i = 6; i >= 2; i--)
 			{
-				GenTransUtil.N = i;
-				GenTransUtil.genKey();
-				GenTransUtil.transData();
+				File file1 = new File("texas_data_" + i + ".txt");
+				if (!file1.exists())
+				{
+					GenTransUtil.N = i;
+					GenTransUtil.genKey();
+					GenTransUtil.transData();
+				}
+			}
+		}
+	}
+
+	private static void genTransOpt()
+	{
+		File file = new File("texas_data.txt");
+		if (file.exists())
+		{
+			for (int i = 6; i >= 2; i--)
+			{
+				File file1 = new File("texas_data_" + i + ".txt");
+				if (file1.exists())
+				{
+					GenTransOptUtil.N = i;
+					GenTransOptUtil.optData();
+				}
 			}
 		}
 	}
@@ -93,15 +116,40 @@ public class TexasAlgorithmUtil
 	{
 		try
 		{
+			long begin = System.currentTimeMillis();
 			FileInputStream inputStream = new FileInputStream("texas_data_color.txt");
 			loadColor(inputStream);
 			FileInputStream inputStream1 = new FileInputStream("texas_data_normal.txt");
 			loadNormal(inputStream1);
+			for (int i = 6; i >= 2; i--)
+			{
+				FileInputStream inputStream2 = new FileInputStream("texas_data_" + i + ".txt");
+				loadProbility(i, inputStream2);
+			}
+			System.out.println("load time " + (System.currentTimeMillis() - begin));
 		}
 		catch (Exception e)
 		{
 			e.printStackTrace();
 		}
+	}
+
+	private static void loadProbility(int i, FileInputStream inputStream) throws Exception
+	{
+		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+
+		probilityMap[i] = new ConcurrentHashMap<>();
+
+		String str = null;
+		while ((str = bufferedReader.readLine()) != null)
+		{
+			String[] params = str.split(" ");
+			long key = Long.parseLong(params[0]);
+			double probility = Double.parseDouble(params[1]);
+
+			probilityMap[i].put(key, probility);
+		}
+		bufferedReader.close();
 	}
 
 	public static void loadNormal(InputStream inputStream) throws Exception
