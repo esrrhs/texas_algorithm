@@ -66,7 +66,9 @@ public class TexasAlgorithmUtil
 	private static void genOpt()
 	{
 		File file = new File("texas_data.txt");
-		if (file.exists())
+		File file1 = new File("texas_data_color.txt");
+		File file2 = new File("texas_data_normal.txt");
+		if (file.exists() && !file1.exists() && !file2.exists())
 		{
 			GenOptUtil.optNormalData();
 			GenOptUtil.optColorData();
