@@ -52,8 +52,9 @@ public class TexasAlgorithmUtil
 	{
 		gen();
 		genOpt();
-		genTrans();
-		genTransOpt();
+		//genTrans();
+		//genTransOpt();
+		genHand();
 	}
 
 	private static void gen()
@@ -75,6 +76,15 @@ public class TexasAlgorithmUtil
 		{
 			GenOptUtil.optNormalData();
 			GenOptUtil.optColorData();
+		}
+	}
+
+	private static void genHand()
+	{
+		for (int i = 4; i >= 0; i--)
+		{
+			GenHandUtil.N = i;
+			GenHandUtil.genKey();
 		}
 	}
 
