@@ -160,7 +160,7 @@ public class GenTransUtil
 				long key = e.getKey();
 				double win = (double) e.getValue().win / e.getValue().num / GenUtil.total;
 
-				String tmp = key + " " + win + "\n";
+				String tmp = key + " " + win + " " + GenUtil.toString(key) + "\n";
 				out.write(tmp.getBytes("utf-8"));
 				totalKey++;
 
