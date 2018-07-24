@@ -116,8 +116,12 @@ public class TexasAlgorithmUtil
 				File file1 = new File("texas_data_" + i + ".txt");
 				if (file1.exists())
 				{
-					GenTransOptUtil.N = i;
-					GenTransOptUtil.optData();
+					File file2 = new File("texas_data_opt_" + i + ".txt");
+					if (!file2.exists())
+					{
+						GenTransOptUtil.N = i;
+						GenTransOptUtil.optData();
+					}
 				}
 			}
 		}
