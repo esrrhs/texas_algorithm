@@ -162,14 +162,34 @@ public class GenOptUtil
 	public static long removeColor(long k)
 	{
 		ArrayList<Integer> cs = new ArrayList<>();
-		cs.add((int) (k % 100000000000000L / 1000000000000L) % 16);
-		cs.add((int) (k % 1000000000000L / 10000000000L) % 16);
-		cs.add((int) (k % 10000000000L / 100000000L) % 16);
-		cs.add((int) (k % 100000000L / 1000000L) % 16);
-		cs.add((int) (k % 1000000L / 10000L) % 16);
-		cs.add((int) (k % 10000L / 100L) % 16);
-		cs.add((int) (k % 100L / 1L) % 16);
-
+		if (k > 1000000000000L)
+		{
+			cs.add((int) (k % 100000000000000L / 1000000000000L) % 16);
+		}
+		if (k > 10000000000L)
+		{
+			cs.add((int) (k % 1000000000000L / 10000000000L) % 16);
+		}
+		if (k > 100000000L)
+		{
+			cs.add((int) (k % 10000000000L / 100000000L) % 16);
+		}
+		if (k > 1000000L)
+		{
+			cs.add((int) (k % 100000000L / 1000000L) % 16);
+		}
+		if (k > 10000L)
+		{
+			cs.add((int) (k % 1000000L / 10000L) % 16);
+		}
+		if (k > 100L)
+		{
+			cs.add((int) (k % 10000L / 100L) % 16);
+		}
+		if (k > 1L)
+		{
+			cs.add((int) (k % 100L / 1L) % 16);
+		}
 		Collections.sort(cs);
 
 		long ret = 0;

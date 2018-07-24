@@ -119,7 +119,7 @@ public class GenTransOptUtil
 				OptKeyData optKeyData = optkeys.get(removeKey);
 				if (optKeyData == null || !optKeyData.max.equals(p))
 				{
-					String tmp = key + " 0 " + p + "\n";
+					String tmp = key + " 0 " + p + " " + GenUtil.toString(key) + "\n";
 					out.write(tmp.getBytes("utf-8"));
 				}
 
@@ -142,7 +142,7 @@ public class GenTransOptUtil
 			{
 				long key = e.getKey();
 				OptKeyData optKeyData = e.getValue();
-				String tmp = key + " 1 " + optKeyData.max + "\n";
+				String tmp = key + " 1 " + optKeyData.max + " " + GenUtil.toString(key) + "\n";
 				out.write(tmp.getBytes("utf-8"));
 			}
 			out.close();
