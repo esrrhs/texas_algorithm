@@ -124,6 +124,19 @@ public class TexasAlgorithmUtil
 			FileInputStream inputStream1 = new FileInputStream("texas_data_normal.txt");
 			loadNormal(inputStream1);
 			inputStream1.close();
+			System.out.println("load time " + (System.currentTimeMillis() - begin));
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	public static void loadProbility()
+	{
+		try
+		{
+			long begin = System.currentTimeMillis();
 			for (int i = 6; i >= 2; i--)
 			{
 				FileInputStream inputStream2 = new FileInputStream("texas_data_opt_" + i + ".txt");
