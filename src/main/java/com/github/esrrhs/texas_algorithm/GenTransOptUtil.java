@@ -147,6 +147,8 @@ public class GenTransOptUtil
 				out.write(tmp.getBytes("utf-8"));
 			}
 			out.close();
+			keys.clear();
+			optkeys.clear();
 
 			System.out.println("optData finish " + totalKey);
 		}

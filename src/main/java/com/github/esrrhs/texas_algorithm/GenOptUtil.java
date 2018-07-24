@@ -80,6 +80,7 @@ public class GenOptUtil
 			}
 
 			out.close();
+			keys.clear();
 
 			System.out.println("optData finish " + totalKey);
 		}
