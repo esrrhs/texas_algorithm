@@ -52,8 +52,8 @@ public class TexasAlgorithmUtil
 	{
 		gen();
 		genOpt();
-		//genTrans();
-		//genTransOpt();
+		genTrans();
+		genTransOpt();
 		genHand();
 	}
 
