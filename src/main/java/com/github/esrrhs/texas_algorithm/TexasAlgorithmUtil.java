@@ -45,7 +45,8 @@ public class TexasAlgorithmUtil
 
 	public static ConcurrentHashMap<Long, KeyData> colorMap = new ConcurrentHashMap<>();
 	public static ConcurrentHashMap<Long, KeyData> normalMap = new ConcurrentHashMap<>();
-	public static ConcurrentHashMap<Long, Double>[] probilityMap = new ConcurrentHashMap[7];
+	public static ConcurrentHashMap<Long, Float>[] probilityMap = new ConcurrentHashMap[7];
+	public static ConcurrentHashMap<Long, Float>[] optprobilityMap = new ConcurrentHashMap[7];
 
 	public static void main(String[] args)
 	{
@@ -119,12 +120,15 @@ public class TexasAlgorithmUtil
 			long begin = System.currentTimeMillis();
 			FileInputStream inputStream = new FileInputStream("texas_data_color.txt");
 			loadColor(inputStream);
+			inputStream.close();
 			FileInputStream inputStream1 = new FileInputStream("texas_data_normal.txt");
 			loadNormal(inputStream1);
+			inputStream1.close();
 			for (int i = 6; i >= 2; i--)
 			{
-				FileInputStream inputStream2 = new FileInputStream("texas_data_" + i + ".txt");
+				FileInputStream inputStream2 = new FileInputStream("texas_data_opt_" + i + ".txt");
 				loadProbility(i, inputStream2);
+				inputStream2.close();
 			}
 			System.out.println("load time " + (System.currentTimeMillis() - begin));
 		}
@@ -139,15 +143,24 @@ public class TexasAlgorithmUtil
 		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 
 		probilityMap[i] = new ConcurrentHashMap<>();
+		optprobilityMap[i] = new ConcurrentHashMap<>();
 
 		String str = null;
 		while ((str = bufferedReader.readLine()) != null)
 		{
 			String[] params = str.split(" ");
 			long key = Long.parseLong(params[0]);
-			double probility = Double.parseDouble(params[1]);
+			long type = Long.parseLong(params[1]);
+			float probility = Float.parseFloat(params[2]);
 
-			probilityMap[i].put(key, probility);
+			if (type == 0)
+			{
+				probilityMap[i].put(key, probility);
+			}
+			else
+			{
+				optprobilityMap[i].put(key, probility);
+			}
 		}
 		bufferedReader.close();
 	}
