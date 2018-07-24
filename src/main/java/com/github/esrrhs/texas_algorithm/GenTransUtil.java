@@ -133,6 +133,7 @@ public class GenTransUtil
 					KeyData keyData = keys.get(l);
 					keyData.win += win;
 					keyData.num++;
+					double p = (double) win / GenUtil.total;
 				}
 
 				totalKey++;
