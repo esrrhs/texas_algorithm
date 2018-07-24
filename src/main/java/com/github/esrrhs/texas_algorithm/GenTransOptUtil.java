@@ -103,6 +103,7 @@ public class GenTransOptUtil
 					if (e1.getValue() > max)
 					{
 						optKeyData.max = e1.getKey();
+						max = e1.getValue();
 					}
 				}
 			}
