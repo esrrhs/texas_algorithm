@@ -60,8 +60,10 @@ public class GenTransOptUtil
 				String[] params = str.split(" ");
 				long key = Long.parseLong(params[0]);
 				String p = params[1];
-
-				keys.put(key, p);
+				String min = params[2];
+				String max = params[3];
+				String value = p + " " + min + " " + max;
+				keys.put(key, value);
 				long removeKey = GenOptUtil.removeColor(key);
 				OptKeyData optKeyData = optkeys.get(removeKey);
 				if (optKeyData == null)
@@ -69,14 +71,14 @@ public class GenTransOptUtil
 					optKeyData = new OptKeyData();
 					optkeys.put(removeKey, optKeyData);
 				}
-				Integer num = optKeyData.ps.get(p);
+				Integer num = optKeyData.ps.get(value);
 				if (num != null)
 				{
-					optKeyData.ps.put(p, num + 1);
+					optKeyData.ps.put(value, num + 1);
 				}
 				else
 				{
-					optKeyData.ps.put(p, 1);
+					optKeyData.ps.put(value, 1);
 				}
 
 				totalKey++;
