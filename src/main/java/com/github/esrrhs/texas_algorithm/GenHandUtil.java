@@ -288,7 +288,6 @@ public class GenHandUtil
 		{
 			my.add((byte) (int) i);
 		}
-		Collections.sort(my);
 
 		for (Integer i : otherhand)
 		{
@@ -302,7 +301,6 @@ public class GenHandUtil
 		{
 			other.add((byte) (int) i);
 		}
-		Collections.sort(other);
 
 		int ret = TexasAlgorithmUtil.compare(my, other);
 		if (ret == 0)
