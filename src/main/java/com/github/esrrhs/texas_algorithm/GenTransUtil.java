@@ -21,6 +21,8 @@ public class GenTransUtil
 	{
 		public long win;
 		public long num;
+		public double min = 1;
+		public double max = 0;
 	}
 
 	public static void genKey()
@@ -134,6 +136,14 @@ public class GenTransUtil
 					keyData.win += win;
 					keyData.num++;
 					double p = (double) win / GenUtil.total;
+					if (p < keyData.min)
+					{
+						keyData.min = p;
+					}
+					if (p > keyData.max)
+					{
+						keyData.max = p;
+					}
 				}
 
 				totalKey++;
@@ -160,7 +170,8 @@ public class GenTransUtil
 				long key = e.getKey();
 				double win = (double) e.getValue().win / e.getValue().num / GenUtil.total;
 
-				String tmp = key + " " + win + " " + GenUtil.toString(key) + "\n";
+				String tmp = key + " " + win + " " + e.getValue().min + " " + e.getValue().max + " "
+						+ GenUtil.toString(key) + "\n";
 				out.write(tmp.getBytes("utf-8"));
 				totalKey++;
 

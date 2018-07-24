@@ -83,8 +83,12 @@ public class TexasAlgorithmUtil
 	{
 		for (int i = 4; i >= 0; i--)
 		{
-			GenHandUtil.N = i;
-			GenHandUtil.genKey();
+			File file1 = new File("texas_hand_" + i + ".txt");
+			if (!file1.exists())
+			{
+				GenHandUtil.N = i;
+				GenHandUtil.genKey();
+			}
 		}
 	}
 
