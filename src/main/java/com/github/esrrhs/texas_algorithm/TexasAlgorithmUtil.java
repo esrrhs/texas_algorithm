@@ -195,7 +195,7 @@ public class TexasAlgorithmUtil
 		}
 	}
 
-	private static void loadProbility(int i, FileInputStream inputStream) throws Exception
+	public static void loadProbility(int i, InputStream inputStream) throws Exception
 	{
 		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 
