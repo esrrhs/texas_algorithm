@@ -25,6 +25,42 @@ public class TestUtil
 
 		TexasAlgorithmUtil.loadProbility();
 		System.out.println(TexasAlgorithmUtil.getHandProbability("方2,方3", "方4,方5,方7,方8"));
+
+		compare("hand4/texas_hand_方2方3.txt");
 	}
 
+	public static void compare(String file)
+	{
+		int total = 0;
+		int diff = 0;
+		try
+		{
+			FileInputStream inputStream = new FileInputStream(file);
+			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+
+			String str = null;
+			while ((str = bufferedReader.readLine()) != null)
+			{
+				String[] params = str.split(" ");
+				long key = Long.parseLong(params[0]);
+				float probility = Float.parseFloat(params[1]);
+				String card = params[2];
+
+				float p = TexasAlgorithmUtil.getHandProbability(key / 100000000, key % 100000000);
+				if (p - probility > 0.2 || probility - p > 0.2)
+				{
+					System.out.println("diff " + (p - probility) + " " + card + " " + p + " " + probility);
+					diff++;
+				}
+				total++;
+			}
+			System.out.println("%" + diff * 100 / total);
+			System.out.println("diff " + diff);
+			System.out.println("total " + total);
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+	}
 }
