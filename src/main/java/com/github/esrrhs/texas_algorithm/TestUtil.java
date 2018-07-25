@@ -1,5 +1,9 @@
 package com.github.esrrhs.texas_algorithm;
 
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+
 public class TestUtil
 {
 	public static void main(String[] args)
@@ -20,7 +24,7 @@ public class TestUtil
 		System.out.println(TexasAlgorithmUtil.compare(cards, cards1));
 
 		TexasAlgorithmUtil.loadProbility();
-		System.out.println(TexasAlgorithmUtil.getHandProbability("方2,方4", "梅K,红7,红8,黑K"));
+		System.out.println(TexasAlgorithmUtil.getHandProbability("方2,方3", "方4,方5,方7,方8"));
 	}
 
 }
