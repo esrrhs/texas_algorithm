@@ -318,6 +318,40 @@ public class TexasAlgorithmUtil
 		return GenUtil.toString(key);
 	}
 
+	public static List<Byte> keyToByte(long k)
+	{
+		ArrayList<Byte> cs = new ArrayList<>();
+		if (k > 1000000000000L)
+		{
+			cs.add(((byte) (k % 100000000000000L / 1000000000000L)));
+		}
+		if (k > 10000000000L)
+		{
+			cs.add(((byte) (k % 1000000000000L / 10000000000L)));
+		}
+		if (k > 100000000L)
+		{
+			cs.add(((byte) (k % 10000000000L / 100000000L)));
+		}
+		if (k > 1000000L)
+		{
+			cs.add(((byte) (k % 100000000L / 1000000L)));
+		}
+		if (k > 10000L)
+		{
+			cs.add(((byte) (k % 1000000L / 10000L)));
+		}
+		if (k > 100L)
+		{
+			cs.add(((byte) (k % 10000L / 100L)));
+		}
+		if (k > 1L)
+		{
+			cs.add(((byte) (k % 100L / 1L)));
+		}
+		return cs;
+	}
+
 	public static List<Byte> strToPokes(String str)
 	{
 		List<Byte> ret = new ArrayList<>();
@@ -520,6 +554,11 @@ public class TexasAlgorithmUtil
 			probilityData = optprobilityMap[num].get(k);
 		}
 		return probilityData;
+	}
+
+	public static float getHandProbability(long hand, long pub)
+	{
+		return getHandProbability(keyToByte(hand), keyToByte(pub));
 	}
 
 	public static float getHandProbability(List<Byte> hand, List<Byte> pub)
