@@ -2,6 +2,7 @@ package com.github.esrrhs.texas_algorithm;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -43,10 +44,39 @@ public class TexasAlgorithmUtil
 		}
 	}
 
+	public static class ProbilityData
+	{
+		private float avg;
+		private float min;
+		private float max;
+
+		public ProbilityData(float avg, float min, float max)
+		{
+			this.avg = avg;
+			this.min = min;
+			this.max = max;
+		}
+
+		public float getAvg()
+		{
+			return avg;
+		}
+
+		public float getMin()
+		{
+			return min;
+		}
+
+		public float getMax()
+		{
+			return max;
+		}
+	}
+
 	public static ConcurrentHashMap<Long, KeyData> colorMap = new ConcurrentHashMap<>();
 	public static ConcurrentHashMap<Long, KeyData> normalMap = new ConcurrentHashMap<>();
-	public static ConcurrentHashMap<Long, Float>[] probilityMap = new ConcurrentHashMap[7];
-	public static ConcurrentHashMap<Long, Float>[] optprobilityMap = new ConcurrentHashMap[7];
+	public static ConcurrentHashMap<Long, ProbilityData>[] probilityMap = new ConcurrentHashMap[7];
+	public static ConcurrentHashMap<Long, ProbilityData>[] optprobilityMap = new ConcurrentHashMap[7];
 
 	public static void main(String[] args)
 	{
@@ -83,12 +113,8 @@ public class TexasAlgorithmUtil
 	{
 		for (int i = 4; i >= 0; i--)
 		{
-			File file1 = new File("texas_hand_" + i + ".txt");
-			if (!file1.exists())
-			{
-				GenHandUtil.N = i;
-				GenHandUtil.genKey();
-			}
+			GenHandUtil.N = i;
+			GenHandUtil.genKey();
 		}
 	}
 
@@ -183,14 +209,16 @@ public class TexasAlgorithmUtil
 			long key = Long.parseLong(params[0]);
 			long type = Long.parseLong(params[1]);
 			float probility = Float.parseFloat(params[2]);
+			float min = Float.parseFloat(params[3]);
+			float max = Float.parseFloat(params[4]);
 
 			if (type == 0)
 			{
-				probilityMap[i].put(key, probility);
+				probilityMap[i].put(key, new ProbilityData(probility, min, max));
 			}
 			else
 			{
-				optprobilityMap[i].put(key, probility);
+				optprobilityMap[i].put(key, new ProbilityData(probility, min, max));
 			}
 		}
 		bufferedReader.close();
@@ -450,5 +478,77 @@ public class TexasAlgorithmUtil
 			return 1;
 		}
 		return keyData1.getPostion() - keyData2.getPostion();
+	}
+
+	public static float getHandProbability(String hand, String pub)
+	{
+		return getHandProbability(strToPokes(hand), strToPokes(pub));
+	}
+
+	public static ProbilityData getHandProbability(long k)
+	{
+		int num = 0;
+		if (k > 10000000000L)
+		{
+			num = 6;
+		}
+		else if (k > 100000000L)
+		{
+			num = 5;
+		}
+		else if (k > 1000000L)
+		{
+			num = 4;
+		}
+		else if (k > 10000L)
+		{
+			num = 3;
+		}
+		else if (k > 100L)
+		{
+			num = 2;
+		}
+		if (num < 2 || num > 6)
+		{
+			return null;
+		}
+
+		ProbilityData probilityData = probilityMap[num].get(k);
+		if (probilityData == null)
+		{
+			k = GenOptUtil.removeColor(k);
+			probilityData = optprobilityMap[num].get(k);
+		}
+		return probilityData;
+	}
+
+	public static float getHandProbability(List<Byte> hand, List<Byte> pub)
+	{
+		hand.addAll(pub);
+		Collections.sort(hand);
+		long totalkey = GenUtil.genCardBind(hand);
+		Collections.sort(pub);
+		long pubkey = GenUtil.genCardBind(pub);
+
+		ProbilityData totalProbilityData = getHandProbability(totalkey);
+		ProbilityData pubProbilityData = getHandProbability(pubkey);
+
+		if (totalProbilityData == null || pubProbilityData == null)
+		{
+			return 0;
+		}
+
+		float p = 0.5f;
+
+		if (totalProbilityData.avg > pubProbilityData.avg)
+		{
+			p += 0.5f * (totalProbilityData.avg - pubProbilityData.avg) / (pubProbilityData.max - pubProbilityData.avg);
+		}
+		else
+		{
+			p += 0.5f * (totalProbilityData.avg - pubProbilityData.avg) / (pubProbilityData.avg - pubProbilityData.min);
+		}
+
+		return p;
 	}
 }
