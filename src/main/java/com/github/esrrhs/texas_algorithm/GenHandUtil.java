@@ -92,7 +92,7 @@ public class GenHandUtil
 	{
 		if (count2 == except)
 		{
-			File file = new File("hand+" + N + "/texas_hand_" + GenUtil.toString(hand[0] * 100 + hand[1]) + ".txt");
+			File file = new File("hand" + N + "/texas_hand_" + GenUtil.toString(hand[0] * 100 + hand[1]) + ".txt");
 			if (!file.exists())
 			{
 				ArrayList<Integer> list1 = new ArrayList<>();
