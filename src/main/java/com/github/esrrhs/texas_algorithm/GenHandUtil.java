@@ -12,7 +12,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class GenHandUtil
 {
 	public static long totalKey = 0;
-	public static FileOutputStream out;
 	public static int lastPrint = 0;
 	public static long beginPrint;
 	public static final long genNum = GenUtil.genNum;
@@ -50,13 +49,11 @@ public class GenHandUtil
 
 			TexasAlgorithmUtil.load();
 
-			File file = new File("texas_hand_" + N + ".txt");
-			if (file.exists())
+			File dir = new File("hand" + N + "/");
+			if (!dir.exists())
 			{
-				file.delete();
+				dir.mkdirs();
 			}
-			file.createNewFile();
-			out = new FileOutputStream(file, true);
 
 			beginPrint = System.currentTimeMillis();
 			totalKey = 0;
@@ -95,22 +92,29 @@ public class GenHandUtil
 	{
 		if (count2 == except)
 		{
-			ArrayList<Integer> list1 = new ArrayList<>();
-			for (byte i = 0; i < 4; ++i)
+			File file = new File("hand+" + N + "/texas_hand_" + GenUtil.toString(hand[0] * 100 + hand[1]) + ".txt");
+			if (!file.exists())
 			{
-				for (byte j = 0; j < genNum / 4; ++j)
+				ArrayList<Integer> list1 = new ArrayList<>();
+				for (byte i = 0; i < 4; ++i)
 				{
-					int z = (Integer) (int) (new Poke(i, (byte) (j + 2))).toByte();
-					if (hand[0] != z && hand[1] != z)
+					for (byte j = 0; j < genNum / 4; ++j)
 					{
-						list1.add(z);
+						int z = (Integer) (int) (new Poke(i, (byte) (j + 2))).toByte();
+						if (hand[0] != z && hand[1] != z)
+						{
+							list1.add(z);
+						}
 					}
 				}
-			}
-			Collections.sort(list1);
+				Collections.sort(list1);
 
-			int[] pub = new int[N];
-			permutation1(list1, 0, 0, N, pub, hand);
+				file.createNewFile();
+				FileOutputStream out = new FileOutputStream(file, true);
+
+				int[] pub = new int[N];
+				permutation1(out, list1, 0, 0, N, pub, hand);
+			}
 		}
 		else
 		{
@@ -122,27 +126,28 @@ public class GenHandUtil
 		}
 	}
 
-	public static void permutation1(ArrayList<Integer> a, int count, int count2, int except, int[] pub, int[] hand)
-			throws Exception
+	public static void permutation1(FileOutputStream out, ArrayList<Integer> a, int count, int count2, int except,
+			int[] pub, int[] hand) throws Exception
 	{
 		if (count2 == except)
 		{
 			if (GenHandUtil.count.get() >= FALLBACK * N_THREADS)
 			{
-				genCardSave(hand, pub);
+				genCardSave(out, hand, pub);
 			}
 			else
 			{
 				GenHandUtil.count.getAndIncrement();
 				final int[] fpub = Arrays.copyOf(pub, pub.length);
 				final int[] fhand = Arrays.copyOf(hand, hand.length);
+				final FileOutputStream fout = out;
 				pool.execute(new Runnable() {
 					@Override
 					public void run()
 					{
 						try
 						{
-							genCardSave(fhand, fpub);
+							genCardSave(fout, fhand, fpub);
 						}
 						catch (Exception e)
 						{
@@ -158,12 +163,12 @@ public class GenHandUtil
 			for (int i = count; i < a.size(); i++)
 			{
 				pub[count2] = a.get(i);
-				permutation1(a, i + 1, count2 + 1, except, pub, hand);
+				permutation1(out, a, i + 1, count2 + 1, except, pub, hand);
 			}
 		}
 	}
 
-	private static void genCardSave(int[] hand, int[] pub) throws Exception
+	private static void genCardSave(FileOutputStream out, int[] hand, int[] pub) throws Exception
 	{
 		long h = GenUtil.genCardBind(hand);
 		long p = GenUtil.genCardBind(pub);
@@ -195,8 +200,6 @@ public class GenHandUtil
 
 	private static double calc(long key, int[] hand, int[] pub) throws Exception
 	{
-		int left = 5 - N;
-
 		ArrayList<Integer> list = new ArrayList<>();
 		for (byte i = 0; i < 4; ++i)
 		{
@@ -307,11 +310,11 @@ public class GenHandUtil
 		{
 			data.tie++;
 		}
-		if (ret < 0)
+		else if (ret < 0)
 		{
 			data.lose++;
 		}
-		else
+		else if (ret > 0)
 		{
 			data.win++;
 		}
