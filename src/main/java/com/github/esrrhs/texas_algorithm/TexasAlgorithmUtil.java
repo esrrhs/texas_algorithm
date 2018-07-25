@@ -355,6 +355,10 @@ public class TexasAlgorithmUtil
 	public static List<Byte> strToPokes(String str)
 	{
 		List<Byte> ret = new ArrayList<>();
+		if (str.length() == 0)
+		{
+			return ret;
+		}
 		String[] strs = str.split(",");
 		for (String s : strs)
 		{
@@ -572,9 +576,14 @@ public class TexasAlgorithmUtil
 		ProbilityData totalProbilityData = getHandProbability(totalkey);
 		ProbilityData pubProbilityData = getHandProbability(pubkey);
 
-		if (totalProbilityData == null || pubProbilityData == null)
+		if (totalProbilityData == null)
 		{
 			return 0;
+		}
+
+		if (pubProbilityData == null)
+		{
+			return totalProbilityData.avg;
 		}
 
 		float p = 0.5f;

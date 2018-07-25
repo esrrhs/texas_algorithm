@@ -1,6 +1,7 @@
 package com.github.esrrhs.texas_algorithm;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 
@@ -25,6 +26,7 @@ public class TestUtil
 
 		TexasAlgorithmUtil.loadProbility();
 		System.out.println(TexasAlgorithmUtil.getHandProbability("方2,方3", "方4,方5,方7,方8"));
+		System.out.println(TexasAlgorithmUtil.getHandProbability("方2,方3", ""));
 
 		compare("hand4/texas_hand_方2方3.txt");
 	}
@@ -36,6 +38,11 @@ public class TestUtil
 		int diff2 = 0;
 		try
 		{
+			File file1 = new File(file);
+			if (!file1.exists())
+			{
+				return;
+			}
 			FileInputStream inputStream = new FileInputStream(file);
 			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 
