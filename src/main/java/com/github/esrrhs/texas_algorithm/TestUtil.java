@@ -32,7 +32,8 @@ public class TestUtil
 	public static void compare(String file)
 	{
 		int total = 0;
-		int diff = 0;
+		int diff1 = 0;
+		int diff2 = 0;
 		try
 		{
 			FileInputStream inputStream = new FileInputStream(file);
@@ -47,15 +48,24 @@ public class TestUtil
 				String card = params[2];
 
 				float p = TexasAlgorithmUtil.getHandProbability(key / 100000000, key % 100000000);
+
+				if (p - probility > 0.1 || probility - p > 0.1)
+				{
+					System.out.println("diff " + (p - probility) + " " + card + " " + p + " " + probility);
+					diff1++;
+				}
 				if (p - probility > 0.2 || probility - p > 0.2)
 				{
 					System.out.println("diff " + (p - probility) + " " + card + " " + p + " " + probility);
-					diff++;
+					diff2++;
 				}
+
 				total++;
 			}
-			System.out.println("%" + diff * 100 / total);
-			System.out.println("diff " + diff);
+			System.out.println("diff>0.1 = %" + diff1 * 100 / total);
+			System.out.println("diff>0.1 = " + diff1);
+			System.out.println("diff>0.2 = %" + diff2 * 100 / total);
+			System.out.println("diff>0.2 = " + diff2);
 			System.out.println("total " + total);
 		}
 		catch (Exception e)
