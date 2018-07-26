@@ -719,32 +719,41 @@ public class TexasAlgorithmUtil
 	{
 		hand.addAll(pub);
 		Collections.sort(hand);
-		long totalkey = GenUtil.genCardBind(hand);
 		Collections.sort(pub);
 		long pubkey = GenUtil.genCardBind(pub);
 
-		ProbilityData totalProbilityData = getHandProbability(totalkey);
 		ProbilityData pubProbilityData = getHandProbability(pubkey);
 
-		if (totalProbilityData == null)
+		float avg = 0;
+		if (hand.size() == 7)
 		{
-			return 0;
+			avg = (float) getWinProbability(hand);
+		}
+		else
+		{
+			long totalkey = GenUtil.genCardBind(hand);
+			ProbilityData totalProbilityData = getHandProbability(totalkey);
+			if (totalProbilityData == null)
+			{
+				return 0;
+			}
+			avg = totalProbilityData.avg;
 		}
 
 		if (pubProbilityData == null)
 		{
-			return totalProbilityData.avg;
+			return avg;
 		}
 
 		float p = 0.5f;
 
-		if (totalProbilityData.avg > pubProbilityData.avg)
+		if (avg > pubProbilityData.avg)
 		{
-			p += 0.5f * (totalProbilityData.avg - pubProbilityData.avg) / (pubProbilityData.max - pubProbilityData.avg);
+			p += 0.5f * (avg - pubProbilityData.avg) / (pubProbilityData.max - pubProbilityData.avg);
 		}
 		else
 		{
-			p += 0.5f * (totalProbilityData.avg - pubProbilityData.avg) / (pubProbilityData.avg - pubProbilityData.min);
+			p += 0.5f * (avg - pubProbilityData.avg) / (pubProbilityData.avg - pubProbilityData.min);
 		}
 
 		return p;
