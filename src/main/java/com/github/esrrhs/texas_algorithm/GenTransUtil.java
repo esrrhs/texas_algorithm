@@ -155,7 +155,7 @@ public class GenTransUtil
 
 					long now = System.currentTimeMillis();
 					float per = (float) (now - beginPrint) / totalKey;
-					System.out.println("N" + N + " " + cur + "% 需要" + per * (GenUtil.total - totalKey) / 60 / 1000 + "分"
+					System.out.println("step1 N" + N + " " + cur + "% 需要" + per * (GenUtil.total - totalKey) / 60 / 1000 + "分"
 							+ " 用时" + (now - beginPrint) / 60 / 1000 + "分" + " 速度"
 							+ totalKey / ((float) (now - beginPrint) / 1000) + "条/秒");
 				}
@@ -182,7 +182,7 @@ public class GenTransUtil
 
 					long now = System.currentTimeMillis();
 					float per = (float) (now - beginPrint) / totalKey;
-					System.out.println("N" + N + " " + cur + "% 需要" + per * (GenUtil.total - totalKey) / 60 / 1000 + "分"
+					System.out.println("step2 N" + N + " " + cur + "% 需要" + per * (GenUtil.total - totalKey) / 60 / 1000 + "分"
 							+ " 用时" + (now - beginPrint) / 60 / 1000 + "分" + " 速度"
 							+ totalKey / ((float) (now - beginPrint) / 1000) + "条/秒");
 				}

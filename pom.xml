@@ -7,7 +7,7 @@
     <groupId>com.github.esrrhs</groupId>
     <artifactId>texas_algorithm</artifactId>
     <packaging>jar</packaging>
-    <version>1.0.2</version>
+    <version>1.0.3</version>
 
     <parent>
         <groupId>org.sonatype.oss</groupId>
@@ -17,7 +17,7 @@
 
 
     <name>texas_algorithm</name>
-    <description>majiang texas_algorithm.</description>
+    <description>texas algorithm.</description>
     <url>https://github.com/esrrhs/texas_algorithm</url>
 
     <licenses>
