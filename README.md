@@ -8,7 +8,7 @@
 <dependency>
     <groupId>com.github.esrrhs</groupId>
     <artifactId>texas_algorithm</artifactId>
-    <version>1.0.4</version>
+    <version>1.0.5</version>
 </dependency>
 ```
 ``` java

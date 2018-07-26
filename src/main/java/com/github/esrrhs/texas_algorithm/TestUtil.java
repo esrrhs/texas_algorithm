@@ -31,6 +31,7 @@ public class TestUtil
 		TexasAlgorithmUtil.loadProbility();
 		System.out.println(TexasAlgorithmUtil.getHandProbability("方3,方A", "黑2,黑4,黑5,黑K"));
 		System.out.println(TexasAlgorithmUtil.getHandProbability("方2,方3", ""));
+		System.out.println(TexasAlgorithmUtil.getHandProbability("方3,方A", "黑2,黑4,黑5,黑K,方A"));
 
 		compare("hand4/texas_hand_方3方10.txt");
 	}
