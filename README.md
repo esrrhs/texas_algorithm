@@ -26,7 +26,7 @@ float p = TexasAlgorithmUtil.getHandProbability("方3,方A", "黑2,黑4,黑5,黑
 * 解压texas_algorithm.rar到当前文件夹
 * 运行TexasAlgorithmUtil.Main
 
-## 查表算法
+# 查表算法
 查表算法，给定任意7张牌，查表给出5张最大牌的牌面以及大小、胜率、类型
 
 ### 算法实现
@@ -52,7 +52,7 @@ float p = TexasAlgorithmUtil.getHandProbability("方3,方A", "黑2,黑4,黑5,黑
 #### 查询方法
 给定7张牌，先去同花表里查，如果没有就去非同花表里查，两个都有就谁大选谁。
 
-## 评估算法
+# 评估算法
 评估算法，给定2张手牌，0-4张公牌，估算出这手牌在1v1情况下的胜率。
 
 ### 算法实现
