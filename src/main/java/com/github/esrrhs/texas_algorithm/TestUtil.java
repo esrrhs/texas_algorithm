@@ -25,10 +25,10 @@ public class TestUtil
 		System.out.println(TexasAlgorithmUtil.compare(cards, cards1));
 
 		TexasAlgorithmUtil.loadProbility();
-		System.out.println(TexasAlgorithmUtil.getHandProbability("方2,方3", "方4,方5,方7,方8"));
+		System.out.println(TexasAlgorithmUtil.getHandProbability("方3,方A", "黑2,黑4,黑5,黑K"));
 		System.out.println(TexasAlgorithmUtil.getHandProbability("方2,方3", ""));
 
-		compare("hand4/texas_hand_方2方3.txt");
+		compare("hand4/texas_hand_方3方10.txt");
 	}
 
 	public static void compare(String file)
