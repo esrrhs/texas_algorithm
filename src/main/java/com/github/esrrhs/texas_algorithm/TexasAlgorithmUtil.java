@@ -409,6 +409,156 @@ public class TexasAlgorithmUtil
 		return getKeyData(key);
 	}
 
+	public static String getMax(String str)
+	{
+		return GenUtil.toString(GenUtil.genCardBind(getMax(strToPokes(str))));
+	}
+
+	public static List<Byte> getMax(List<Byte> hand, List<Byte> pub)
+	{
+		List<Byte> ret = new ArrayList<>();
+		if (hand.size() != 2 || pub.size() != 5)
+		{
+			return ret;
+		}
+		List<Byte> tmp = new ArrayList<>();
+		tmp.addAll(hand);
+		tmp.addAll(pub);
+		KeyData keyData = getKeyData(tmp);
+		if (keyData == null)
+		{
+			return ret;
+		}
+
+		List<Byte> max = keyToByte(keyData.max);
+
+		List<Byte> pubtmp = new ArrayList<>();
+		pubtmp.addAll(pub);
+		List<Byte> handtmp = new ArrayList<>();
+		handtmp.addAll(hand);
+
+		if (keyData.type == TexasCardUtil.TEXAS_CARD_TYPE_TONGHUA
+				|| keyData.type == TexasCardUtil.TEXAS_CARD_TYPE_TONGHUASHUN
+				|| keyData.type == TexasCardUtil.TEXAS_CARD_TYPE_KINGTONGHUASHUN)
+		{
+			int[] srccolor = new int[4];
+			for (int i = 0; i < tmp.size(); i++)
+			{
+				srccolor[tmp.get(i) >> 4]++;
+			}
+
+			int srcmaxColor = 0;
+			for (int i = 0; i < srccolor.length; i++)
+			{
+				if (srccolor[i] >= 5)
+				{
+					srcmaxColor = i;
+					break;
+				}
+			}
+
+			for (int i = 0; i < max.size(); i++)
+			{
+				for (int j = 0; j < pubtmp.size(); j++)
+				{
+					if ((pubtmp.get(j) % 16) == (max.get(i) % 16) && (pubtmp.get(j) >> 4) == srcmaxColor
+							&& max.get(i) != 0 && pubtmp.get(j) != 0)
+					{
+						ret.add(pubtmp.get(j));
+
+						max.set(i, (byte) 0);
+						pubtmp.set(j, (byte) 0);
+						break;
+					}
+				}
+			}
+
+			if (ret.size() < 5)
+			{
+				for (int i = 0; i < max.size(); i++)
+				{
+					for (int j = 0; j < handtmp.size(); j++)
+					{
+						if ((handtmp.get(j) % 16) == (max.get(i) % 16) && (handtmp.get(j) >> 4) == srcmaxColor
+								&& max.get(i) != 0 && handtmp.get(j) != 0)
+						{
+							ret.add(handtmp.get(j));
+
+							max.set(i, (byte) 0);
+							handtmp.set(j, (byte) 0);
+							break;
+						}
+					}
+				}
+			}
+		}
+		else
+		{
+			for (int i = 0; i < max.size(); i++)
+			{
+				for (int j = 0; j < pubtmp.size(); j++)
+				{
+					if ((pubtmp.get(j) % 16) == (max.get(i) % 16) && max.get(i) != 0 && pubtmp.get(j) != 0)
+					{
+						ret.add(pubtmp.get(j));
+
+						max.set(i, (byte) 0);
+						pubtmp.set(j, (byte) 0);
+						break;
+					}
+				}
+			}
+
+			if (ret.size() < 5)
+			{
+				for (int i = 0; i < max.size(); i++)
+				{
+					for (int j = 0; j < handtmp.size(); j++)
+					{
+						if ((handtmp.get(j) % 16) == (max.get(i) % 16) && max.get(i) != 0 && handtmp.get(j) != 0)
+						{
+							ret.add(handtmp.get(j));
+
+							max.set(i, (byte) 0);
+							handtmp.set(j, (byte) 0);
+							break;
+						}
+					}
+				}
+			}
+
+		}
+
+		Collections.sort(ret);
+
+		return ret;
+	}
+
+	public static List<Byte> getMax(List<Byte> pokes)
+	{
+		if (pokes.size() != 7)
+		{
+			return new ArrayList<>();
+		}
+		List<Byte> hand = new ArrayList<>();
+		hand.add(pokes.get(0));
+		hand.add(pokes.get(1));
+
+		List<Byte> pub = new ArrayList<>();
+		pub.add(pokes.get(2));
+		pub.add(pokes.get(3));
+		pub.add(pokes.get(4));
+		pub.add(pokes.get(5));
+		pub.add(pokes.get(6));
+
+		return getMax(hand, pub);
+	}
+
+	public static String getMax(String hand, String pub)
+	{
+		return GenUtil.toString(GenUtil.genCardBind(getMax(strToPokes(hand), strToPokes(pub))));
+	}
+
 	public static int getWinPosition(String str)
 	{
 		KeyData keyData = getKeyData(str);

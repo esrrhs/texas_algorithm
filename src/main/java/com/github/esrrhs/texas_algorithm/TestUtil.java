@@ -24,6 +24,10 @@ public class TestUtil
 
 		System.out.println(TexasAlgorithmUtil.compare(cards, cards1));
 
+		System.out.println(TexasAlgorithmUtil.getMax("方4,方2", "黑2,黑A,方3,黑5,黑6"));
+		System.out.println(TexasAlgorithmUtil.getMax("方4,方2", "黑2,黑A,黑7,黑5,黑6"));
+		System.out.println(TexasAlgorithmUtil.getMax("黑2,黑3", "方2,方A,黑7,黑5,黑6"));
+
 		TexasAlgorithmUtil.loadProbility();
 		System.out.println(TexasAlgorithmUtil.getHandProbability("方3,方A", "黑2,黑4,黑5,黑K"));
 		System.out.println(TexasAlgorithmUtil.getHandProbability("方2,方3", ""));
