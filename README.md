@@ -3,6 +3,25 @@
 * 查表算法
 * 评估算法
 
+## 使用
+``` xml
+<dependency>
+    <groupId>com.github.esrrhs</groupId>
+    <artifactId>texas_algorithm</artifactId>
+    <version>1.0.3</version>
+</dependency>
+```
+``` java
+// 获取7张牌的大小，用于比牌
+int win = TexasAlgorithmUtil.getWinPosition("方4,方A,黑2,黑A,黑3,黑5,黑6")
+// 获取2张手牌4张公牌的胜率，用于评估
+float p = TexasAlgorithmUtil.getHandProbability("方3,方A", "黑2,黑4,黑5,黑K");
+```
+
+## 测试玩玩
+* 解压texas_algorithm.rar到当前文件夹
+* 运行TestUtil.Main
+
 ## 查表算法
 查表算法，给定任意7张牌，查表给出5张最大牌的牌面以及大小、胜率、类型
 
