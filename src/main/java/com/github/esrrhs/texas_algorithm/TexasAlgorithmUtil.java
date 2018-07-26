@@ -756,6 +756,15 @@ public class TexasAlgorithmUtil
 			p += 0.5f * (avg - pubProbilityData.avg) / (pubProbilityData.avg - pubProbilityData.min);
 		}
 
+		if (p > 1)
+		{
+			p = 1;
+		}
+		if (p < 0)
+		{
+			p = 0;
+		}
+
 		return p;
 	}
 }
