@@ -197,16 +197,20 @@ public class GenUtil
 
 	public static long max(long k)
 	{
-		ArrayList<Poke> cs = new ArrayList<>();
-		cs.add(new Poke((byte) (k % 100000000000000L / 1000000000000L)));
-		cs.add(new Poke((byte) (k % 1000000000000L / 10000000000L)));
-		cs.add(new Poke((byte) (k % 10000000000L / 100000000L)));
-		cs.add(new Poke((byte) (k % 100000000L / 1000000L)));
-		cs.add(new Poke((byte) (k % 1000000L / 10000L)));
-		cs.add(new Poke((byte) (k % 10000L / 100L)));
-		cs.add(new Poke((byte) (k % 100L / 1L)));
+		ArrayList<Poke> cs = toArray(k);
 		ArrayList<Poke> pickedCards1 = new ArrayList<>();
-		TexasCardUtil.fiveFromSeven(cs, pickedCards1);
+		if (cs.size() == 7)
+		{
+			TexasCardUtil.fiveFromSeven(cs, pickedCards1);
+		}
+		else if (cs.size() == 6)
+		{
+			TexasCardUtil.fiveFromSix(cs, pickedCards1);
+		}
+		else if (cs.size() == 5)
+		{
+			pickedCards1.addAll(cs);
+		}
 
 		long ret = 0;
 		for (Poke p : pickedCards1)
@@ -218,21 +222,25 @@ public class GenUtil
 
 	public static int maxType(long k)
 	{
-		ArrayList<Poke> cs = new ArrayList<>();
-		cs.add(new Poke((byte) (k % 100000000000000L / 1000000000000L)));
-		cs.add(new Poke((byte) (k % 1000000000000L / 10000000000L)));
-		cs.add(new Poke((byte) (k % 10000000000L / 100000000L)));
-		cs.add(new Poke((byte) (k % 100000000L / 1000000L)));
-		cs.add(new Poke((byte) (k % 1000000L / 10000L)));
-		cs.add(new Poke((byte) (k % 10000L / 100L)));
-		cs.add(new Poke((byte) (k % 100L / 1L)));
+		ArrayList<Poke> cs = toArray(k);
 		ArrayList<Poke> pickedCards1 = new ArrayList<>();
-		TexasCardUtil.fiveFromSeven(cs, pickedCards1);
+		if (cs.size() == 7)
+		{
+			TexasCardUtil.fiveFromSeven(cs, pickedCards1);
+		}
+		else if (cs.size() == 6)
+		{
+			TexasCardUtil.fiveFromSix(cs, pickedCards1);
+		}
+		else if (cs.size() == 5)
+		{
+			pickedCards1.addAll(cs);
+		}
 
 		return TexasCardUtil.getCardTypeUnordered(pickedCards1);
 	}
 
-	public static String toString(long k)
+	public static ArrayList<Poke> toArray(long k)
 	{
 		ArrayList<Poke> cs = new ArrayList<>();
 		if (k > 1000000000000L)
@@ -263,6 +271,12 @@ public class GenUtil
 		{
 			cs.add(new Poke((byte) (k % 100L / 1L)));
 		}
+		return cs;
+	}
+
+	public static String toString(long k)
+	{
+		ArrayList<Poke> cs = toArray(k);
 		String ret = "";
 		for (Poke poke : cs)
 		{
@@ -273,33 +287,43 @@ public class GenUtil
 
 	public static boolean compare(long k1, long k2)
 	{
-		if (useOpt)
+//		if (useOpt)
+//		{
+//			return TexasAlgorithmUtil.compare(k1, k2) < 0;
+//		}
+//		else
 		{
-			return TexasAlgorithmUtil.compare(k1, k2) < 0;
-		}
-		else
-		{
-			ArrayList<Poke> cs1 = new ArrayList<>();
-			cs1.add(new Poke((byte) (k1 % 100000000000000L / 1000000000000L)));
-			cs1.add(new Poke((byte) (k1 % 1000000000000L / 10000000000L)));
-			cs1.add(new Poke((byte) (k1 % 10000000000L / 100000000L)));
-			cs1.add(new Poke((byte) (k1 % 100000000L / 1000000L)));
-			cs1.add(new Poke((byte) (k1 % 1000000L / 10000L)));
-			cs1.add(new Poke((byte) (k1 % 10000L / 100L)));
-			cs1.add(new Poke((byte) (k1 % 100L / 1L)));
+			ArrayList<Poke> cs1 = toArray(k1);
 			ArrayList<Poke> pickedCards1 = new ArrayList<>();
-			TexasCardUtil.fiveFromSeven(cs1, pickedCards1);
+			if (cs1.size() == 7)
+			{
+				TexasCardUtil.fiveFromSeven(cs1, pickedCards1);
+			}
+			else if (cs1.size() == 6)
+			{
+				TexasCardUtil.fiveFromSix(cs1, pickedCards1);
+			}
+			else if (cs1.size() == 5)
+			{
+				Collections.sort(cs1, new TexasCardUtil.TexasPokeLogicValueComparator());
+				pickedCards1.addAll(cs1);
+			}
 
-			ArrayList<Poke> cs2 = new ArrayList<>();
-			cs2.add(new Poke((byte) (k2 % 100000000000000L / 1000000000000L)));
-			cs2.add(new Poke((byte) (k2 % 1000000000000L / 10000000000L)));
-			cs2.add(new Poke((byte) (k2 % 10000000000L / 100000000L)));
-			cs2.add(new Poke((byte) (k2 % 100000000L / 1000000L)));
-			cs2.add(new Poke((byte) (k2 % 1000000L / 10000L)));
-			cs2.add(new Poke((byte) (k2 % 10000L / 100L)));
-			cs2.add(new Poke((byte) (k2 % 100L / 1L)));
+			ArrayList<Poke> cs2 = toArray(k2);
 			ArrayList<Poke> pickedCards2 = new ArrayList<>();
-			TexasCardUtil.fiveFromSeven(cs2, pickedCards2);
+			if (cs2.size() == 7)
+			{
+				TexasCardUtil.fiveFromSeven(cs2, pickedCards2);
+			}
+			else if (cs2.size() == 6)
+			{
+				TexasCardUtil.fiveFromSix(cs2, pickedCards2);
+			}
+			else if (cs2.size() == 5)
+			{
+				Collections.sort(cs2, new TexasCardUtil.TexasPokeLogicValueComparator());
+				pickedCards2.addAll(cs2);
+			}
 
 			return TexasCardUtil.compareCards(pickedCards1, pickedCards2) < 0;
 		}
@@ -326,8 +350,6 @@ public class GenUtil
 
 	public static void main(String[] args)
 	{
-		System.out.println(toString(5336520318L));
-		System.out.println(toString(504520351L));
-		System.out.println(equal(5336520318L, 504520351L));
+		System.out.println(compare(4243444546L, 218343551L));
 	}
 }
