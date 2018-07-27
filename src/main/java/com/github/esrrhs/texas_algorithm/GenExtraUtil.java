@@ -12,7 +12,7 @@ public class GenExtraUtil
 	public static FileOutputStream out;
 	public static int lastPrint = 0;
 	public static long beginPrint;
-	public static final long genNum = 52;
+	public static final long genNum = GenUtil.genNum;
 	public static long total;
 	public static int N = 6;
 	public static ArrayList<Long> keys = new ArrayList<>();
