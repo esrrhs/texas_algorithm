@@ -17,7 +17,7 @@ public class TexasCardUtil
 	public static final int TEXAS_CARD_TYPE_TONGHUASHUN = 9; //同花顺
 	public static final int TEXAS_CARD_TYPE_KINGTONGHUASHUN = 10; //皇家同花顺
 
-	private static class TexasPokeLogicValueComparator implements Comparator
+	public static class TexasPokeLogicValueComparator implements Comparator
 	{
 		public int compare(Object o1, Object o2)
 		{
@@ -221,6 +221,62 @@ public class TexasCardUtil
 							tmpPickedCards.add(tmpSevenCards.get(k));
 							tmpPickedCards.add(tmpSevenCards.get(l));
 							tmpPickedCards.add(tmpSevenCards.get(m));
+
+							tmpCardType = getCardType(tmpPickedCards);
+
+							if (compareCards(tmpPickedCards, pickedCards) == 1)
+							{//找到更大的牌 进行替换
+								cardType = tmpCardType;
+								pickedCards.clear();
+								for (Poke poke : tmpPickedCards)
+								{
+									pickedCards.add(poke);
+								}
+							}
+
+						}
+					}
+				}
+			}
+		}
+		return cardType;
+	}
+
+	public static int fiveFromSix(ArrayList<Poke> cards, ArrayList<Poke> pickedCards)
+	{
+		if (pickedCards == null)
+		{
+			pickedCards = new ArrayList<>();
+		}
+		pickedCards.clear();
+		ArrayList<Poke> tmpSixCards = cards;
+		//对七张牌排序
+		Collections.sort(tmpSixCards, new TexasPokeLogicValueComparator());
+
+		for (int i = 0; i < 5; ++i)
+		{
+			pickedCards.add(tmpSixCards.get(i));
+		}
+		int cardType = getCardType(pickedCards);
+		int tmpCardType = 0;
+		ArrayList<Poke> tmpPickedCards = new ArrayList<>();
+
+		for (int i = 0; i < 3; ++i)
+		{
+			for (int j = i + 1; j < 4; ++j)
+			{
+				for (int k = j + 1; k < 5; ++k)
+				{
+					for (int l = k + 1; l < 6; ++l)
+					{
+						for (int m = l + 1; m < 6; ++m)
+						{
+							tmpPickedCards.clear();
+							tmpPickedCards.add(tmpSixCards.get(i));
+							tmpPickedCards.add(tmpSixCards.get(j));
+							tmpPickedCards.add(tmpSixCards.get(k));
+							tmpPickedCards.add(tmpSixCards.get(l));
+							tmpPickedCards.add(tmpSixCards.get(m));
 
 							tmpCardType = getCardType(tmpPickedCards);
 

@@ -81,6 +81,7 @@ public class TexasAlgorithmUtil
 	public static void main(String[] args)
 	{
 		gen();
+		genExtra();
 		genOpt();
 		genTrans();
 		genTransOpt();
@@ -94,6 +95,24 @@ public class TexasAlgorithmUtil
 		{
 			GenUtil.genKey();
 			GenUtil.outputData();
+		}
+	}
+
+	private static void genExtra()
+	{
+		File file = new File("texas_data_extra_6.txt");
+		if (!file.exists())
+		{
+			GenExtraUtil.N = 6;
+			GenExtraUtil.genKey();
+			GenExtraUtil.outputData();
+		}
+		file = new File("texas_data_extra_5.txt");
+		if (!file.exists())
+		{
+			GenExtraUtil.N = 5;
+			GenExtraUtil.genKey();
+			GenExtraUtil.outputData();
 		}
 	}
 

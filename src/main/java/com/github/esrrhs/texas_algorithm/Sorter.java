@@ -122,14 +122,14 @@ public class Sorter
 				GenUtil.progress.getAndAdd(1);
 
 				int step = GenUtil.progress.intValue();
-				int cur = (int) ((long) step * 10000 / GenUtil.total);
+				int cur = (int) ((long) step * 10000 / total);
 				if (cur != GenUtil.lastPrint)
 				{
 					GenUtil.lastPrint = cur;
 
 					long now = System.currentTimeMillis();
 					float per = (float) (now - GenUtil.beginPrint) / step;
-					System.out.println(cur + "%% 需要" + per * (GenUtil.total - step) / 60 / 1000 + "分" + " 用时"
+					System.out.println(cur + "%% 需要" + per * (total - step) / 60 / 1000 + "分" + " 用时"
 							+ (now - GenUtil.beginPrint) / 60 / 1000 + "分" + " 速度"
 							+ step / ((float) (now - GenUtil.beginPrint) / 1000) + "条/秒");
 				}
