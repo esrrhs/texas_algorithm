@@ -83,6 +83,7 @@ public class TexasAlgorithmUtil
 		gen();
 		genExtra();
 		genOpt();
+		genExtraOpt();
 		genTrans();
 		genTransOpt();
 		genHand();
@@ -125,6 +126,28 @@ public class TexasAlgorithmUtil
 		{
 			GenOptUtil.optNormalData();
 			GenOptUtil.optColorData();
+		}
+	}
+
+	private static void genExtraOpt()
+	{
+		File file = new File("texas_data_extra_6.txt");
+		File file1 = new File("texas_data_extra_color_6.txt");
+		File file2 = new File("texas_data_extra_normal_6.txt");
+		if (file.exists() && !file1.exists() && !file2.exists())
+		{
+			GenExtraOptUtil.N = 6;
+			GenExtraOptUtil.optNormalData();
+			GenExtraOptUtil.optColorData();
+		}
+		file = new File("texas_data_extra_5.txt");
+		file1 = new File("texas_data_extra_color_5.txt");
+		file2 = new File("texas_data_extra_normal_5.txt");
+		if (file.exists() && !file1.exists() && !file2.exists())
+		{
+			GenExtraOptUtil.N = 5;
+			GenExtraOptUtil.optNormalData();
+			GenExtraOptUtil.optColorData();
 		}
 	}
 
