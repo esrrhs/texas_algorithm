@@ -207,9 +207,21 @@ public class TexasAlgorithmUtil
 			FileInputStream inputStream = new FileInputStream("texas_data_color.txt");
 			loadColor(inputStream);
 			inputStream.close();
-			FileInputStream inputStream1 = new FileInputStream("texas_data_normal.txt");
-			loadNormal(inputStream1);
-			inputStream1.close();
+			inputStream = new FileInputStream("texas_data_normal.txt");
+			loadNormal(inputStream);
+			inputStream.close();
+			inputStream = new FileInputStream("texas_data_extra_color_6.txt");
+			loadColor(inputStream);
+			inputStream.close();
+			inputStream = new FileInputStream("texas_data_extra_normal_6.txt");
+			loadNormal(inputStream);
+			inputStream.close();
+			inputStream = new FileInputStream("texas_data_extra_color_5.txt");
+			loadColor(inputStream);
+			inputStream.close();
+			inputStream = new FileInputStream("texas_data_extra_normal_5.txt");
+			loadNormal(inputStream);
+			inputStream.close();
 			System.out.println("load time " + (System.currentTimeMillis() - begin));
 		}
 		catch (Exception e)
@@ -270,7 +282,6 @@ public class TexasAlgorithmUtil
 	{
 		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 
-		normalMap.clear();
 		String str = null;
 		while ((str = bufferedReader.readLine()) != null)
 		{
@@ -290,7 +301,6 @@ public class TexasAlgorithmUtil
 	public static void loadColor(InputStream inputStream) throws Exception
 	{
 		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-		colorMap.clear();
 		String str = null;
 		while ((str = bufferedReader.readLine()) != null)
 		{
@@ -459,7 +469,11 @@ public class TexasAlgorithmUtil
 	public static List<Byte> getMax(List<Byte> hand, List<Byte> pub)
 	{
 		List<Byte> ret = new ArrayList<>();
-		if (hand.size() != 2 || pub.size() != 5)
+		if (hand.size() != 2)
+		{
+			return ret;
+		}
+		if (pub.size() < 3 || pub.size() > 5)
 		{
 			return ret;
 		}
@@ -603,12 +617,7 @@ public class TexasAlgorithmUtil
 
 	public static int getWinPosition(String str)
 	{
-		KeyData keyData = getKeyData(str);
-		if (keyData == null)
-		{
-			return 0;
-		}
-		return keyData.getPostion();
+		return getWinPosition(strToPokes(str));
 	}
 
 	public static int getWinPosition(List<Byte> pokes)
@@ -623,12 +632,7 @@ public class TexasAlgorithmUtil
 
 	public static double getWinProbability(String str)
 	{
-		KeyData keyData = getKeyData(str);
-		if (keyData == null)
-		{
-			return 0;
-		}
-		return (double) keyData.getIndex() / GenUtil.total;
+		return getWinProbability(strToPokes(str));
 	}
 
 	public static double getWinProbability(List<Byte> pokes)
@@ -638,17 +642,21 @@ public class TexasAlgorithmUtil
 		{
 			return 0;
 		}
-		return (double) keyData.getIndex() / GenUtil.total;
+		long total = 1;
+		for (int i = 0; i < pokes.size(); i++)
+		{
+			total = total * (GenUtil.genNum - i);
+		}
+		for (int i = pokes.size(); i >= 1; i--)
+		{
+			total = total / i;
+		}
+		return (double) keyData.getIndex() / total;
 	}
 
 	public static long getWinMax(String str)
 	{
-		KeyData keyData = getKeyData(str);
-		if (keyData == null)
-		{
-			return 0;
-		}
-		return keyData.getMax();
+		return getWinMax(strToPokes(str));
 	}
 
 	public static long getWinMax(List<Byte> pokes)
@@ -663,12 +671,7 @@ public class TexasAlgorithmUtil
 
 	public static int getWinType(String str)
 	{
-		KeyData keyData = getKeyData(str);
-		if (keyData == null)
-		{
-			return 0;
-		}
-		return keyData.getType();
+		return getWinType(strToPokes(str));
 	}
 
 	public static int getWinType(List<Byte> pokes)

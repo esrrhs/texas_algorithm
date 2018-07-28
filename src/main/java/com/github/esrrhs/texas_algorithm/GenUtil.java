@@ -98,12 +98,19 @@ public class GenUtil
 		return ret;
 	}
 
-	public static long genCardBind(List<Byte> tmp)
+	public static long genCardBind(List tmp)
 	{
 		long ret = 0;
-		for (Byte i : tmp)
+		for (Object i : tmp)
 		{
-			ret = ret * 100 + i;
+			if (i instanceof Integer)
+			{
+				ret = ret * 100 + ((Integer)i);
+			}
+			else if (i instanceof Byte)
+			{
+				ret = ret * 100 + ((Byte)i);
+			}
 		}
 		return ret;
 	}
@@ -287,11 +294,11 @@ public class GenUtil
 
 	public static boolean compare(long k1, long k2)
 	{
-//		if (useOpt)
-//		{
-//			return TexasAlgorithmUtil.compare(k1, k2) < 0;
-//		}
-//		else
+		//		if (useOpt)
+		//		{
+		//			return TexasAlgorithmUtil.compare(k1, k2) < 0;
+		//		}
+		//		else
 		{
 			ArrayList<Poke> cs1 = toArray(k1);
 			ArrayList<Poke> pickedCards1 = new ArrayList<>();

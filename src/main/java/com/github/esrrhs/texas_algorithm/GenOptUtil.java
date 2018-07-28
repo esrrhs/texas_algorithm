@@ -1,9 +1,7 @@
 package com.github.esrrhs.texas_algorithm;
 
 import java.io.*;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 
@@ -205,14 +203,35 @@ public class GenOptUtil
 
 	public static long changeColor(long k)
 	{
-		int[] cs = new int[7];
-		cs[0] = ((byte) (k % 100000000000000L / 1000000000000L));
-		cs[1] = ((byte) (k % 1000000000000L / 10000000000L));
-		cs[2] = ((byte) (k % 10000000000L / 100000000L));
-		cs[3] = ((byte) (k % 100000000L / 1000000L));
-		cs[4] = ((byte) (k % 1000000L / 10000L));
-		cs[5] = ((byte) (k % 10000L / 100L));
-		cs[6] = ((byte) (k % 100L / 1L));
+		ArrayList<Integer> cs = new ArrayList<>();
+		if (k > 1000000000000L)
+		{
+			cs.add((int) (k % 100000000000000L / 1000000000000L));
+		}
+		if (k > 10000000000L)
+		{
+			cs.add((int) (k % 1000000000000L / 10000000000L));
+		}
+		if (k > 100000000L)
+		{
+			cs.add((int) (k % 10000000000L / 100000000L));
+		}
+		if (k > 1000000L)
+		{
+			cs.add((int) (k % 100000000L / 1000000L));
+		}
+		if (k > 10000L)
+		{
+			cs.add((int) (k % 1000000L / 10000L));
+		}
+		if (k > 100L)
+		{
+			cs.add((int) (k % 10000L / 100L));
+		}
+		if (k > 1L)
+		{
+			cs.add((int) (k % 100L / 1L));
+		}
 
 		int[] color = new int[4];
 		for (Integer i : cs)
@@ -230,20 +249,20 @@ public class GenOptUtil
 			}
 		}
 
-		for (int i = 0; i < 7; i++)
+		for (int i = 0; i < cs.size(); i++)
 		{
-			int c = cs[i];
+			int c = cs.get(i);
 			if ((c >> 4) == maxColor)
 			{
-				cs[i] = (byte) (Poke.PokeColor_HEI << 4 | (cs[i] % 16));
+				cs.set(i, (Poke.PokeColor_HEI << 4 | (c % 16)));
 			}
 			else
 			{
-				cs[i] = (byte) (Poke.PokeColor_FANG << 4 | (cs[i] % 16));
+				cs.set(i, (Poke.PokeColor_FANG << 4 | (c % 16)));
 			}
 		}
 
-		Arrays.sort(cs);
+		Collections.sort(cs);
 
 		return GenUtil.genCardBind(cs);
 	}
