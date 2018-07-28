@@ -24,9 +24,23 @@ public class TestUtil
 
 		System.out.println(TexasAlgorithmUtil.compare(cards, cards1));
 
+		String cards2 = "红8,方A,方2,黑8,黑5,黑7";
+		System.out.println(TexasAlgorithmUtil.getWinPosition(cards2));
+		System.out.println(TexasAlgorithmUtil.getWinProbability(cards2));
+		System.out.println(TexasAlgorithmUtil.keyToStr(TexasAlgorithmUtil.getWinMax(cards2)));
+		System.out.println(TexasAlgorithmUtil.getWinType(cards2));
+
+		String cards3 = "红8,方A,方2,黑5,黑7";
+		System.out.println(TexasAlgorithmUtil.getWinPosition(cards3));
+		System.out.println(TexasAlgorithmUtil.getWinProbability(cards3));
+		System.out.println(TexasAlgorithmUtil.keyToStr(TexasAlgorithmUtil.getWinMax(cards3)));
+		System.out.println(TexasAlgorithmUtil.getWinType(cards3));
+
 		System.out.println(TexasAlgorithmUtil.getMax("方4,方2", "黑2,黑A,方3,黑5,黑6"));
 		System.out.println(TexasAlgorithmUtil.getMax("方4,方2", "黑2,黑A,黑7,黑5,黑6"));
 		System.out.println(TexasAlgorithmUtil.getMax("黑2,黑3", "方2,方A,黑7,黑5,黑6"));
+		System.out.println(TexasAlgorithmUtil.getMax("黑2,黑3", "方2,方A,黑7,黑5"));
+		System.out.println(TexasAlgorithmUtil.getMax("黑2,黑3", "方2,黑7,黑5"));
 
 		TexasAlgorithmUtil.loadProbility();
 		System.out.println(TexasAlgorithmUtil.getHandProbability("方3,方A", "黑2,黑4,黑5,黑K"));
