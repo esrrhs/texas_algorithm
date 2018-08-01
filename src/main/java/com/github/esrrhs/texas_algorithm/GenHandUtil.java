@@ -19,6 +19,7 @@ public class GenHandUtil
 	public static long totalhand = genNum * (genNum - 1) / 2;
 	public static long totalpub = 1;
 	public static long total = 1;
+	public static long totalcalc = 1;
 	public static final int N_THREADS = Runtime.getRuntime().availableProcessors();
 	public static final int FALLBACK = 2;
 	public static Executor pool;
@@ -46,6 +47,24 @@ public class GenHandUtil
 				totalpub = totalpub / i;
 			}
 			total = totalpub * totalhand;
+
+			totalcalc = 1;
+			for (int i = 0; i < 5 - N; i++)
+			{
+				totalcalc = totalcalc * (genNum - 2 - N - i);
+			}
+			for (int i = 5 - N; i >= 1; i--)
+			{
+				totalcalc = totalcalc / i;
+			}
+			for (int i = 0; i < 2; i++)
+			{
+				totalcalc = totalcalc * (genNum - 7 - i);
+			}
+			for (int i = 2; i >= 1; i--)
+			{
+				totalcalc = totalcalc / i;
+			}
 
 			TexasAlgorithmUtil.load();
 
@@ -198,6 +217,13 @@ public class GenHandUtil
 		}
 	}
 
+	private static class CalcShowData
+	{
+		long num;
+		long last;
+		long begin;
+	}
+
 	private static double calc(long key, int[] hand, int[] pub) throws Exception
 	{
 		ArrayList<Integer> list = new ArrayList<>();
@@ -222,14 +248,17 @@ public class GenHandUtil
 
 		CalcData data = new CalcData();
 
+		CalcShowData index = new CalcShowData();
+		index.begin = System.currentTimeMillis();
+
 		int[] otherhand = new int[2];
-		permutation2(data, hand, pub, list, 0, 0, 2, otherhand);
+		permutation2(data, hand, pub, list, 0, 0, 2, otherhand, index);
 
 		return ((double) data.win + (double) data.tie * 0.5) / data.total;
 	}
 
 	public static void permutation2(CalcData data, int[] hand, int[] pub, ArrayList<Integer> a, int count, int count2,
-			int except, int[] otherhand) throws Exception
+			int except, int[] otherhand, CalcShowData index) throws Exception
 	{
 		if (count2 == except)
 		{
@@ -240,7 +269,7 @@ public class GenHandUtil
 			Collections.sort(a);
 
 			int[] leftpub = new int[5 - N];
-			permutation3(data, hand, pub, a, 0, 0, 5 - N, leftpub, otherhand);
+			permutation3(data, hand, pub, a, 0, 0, 5 - N, leftpub, otherhand, index);
 
 			for (Integer p : otherhand)
 			{
@@ -253,29 +282,29 @@ public class GenHandUtil
 			for (int i = count; i < a.size(); i++)
 			{
 				otherhand[count2] = a.get(i);
-				permutation2(data, hand, pub, a, i + 1, count2 + 1, except, otherhand);
+				permutation2(data, hand, pub, a, i + 1, count2 + 1, except, otherhand, index);
 			}
 		}
 	}
 
 	public static void permutation3(CalcData data, int[] hand, int[] pub, ArrayList<Integer> a, int count, int count2,
-			int except, int[] leftpub, int[] otherhand) throws Exception
+			int except, int[] leftpub, int[] otherhand, CalcShowData index) throws Exception
 	{
 		if (count2 == except)
 		{
-			calc(data, hand, pub, leftpub, otherhand);
+			calc(data, hand, pub, leftpub, otherhand, index);
 		}
 		else
 		{
 			for (int i = count; i < a.size(); i++)
 			{
 				leftpub[count2] = a.get(i);
-				permutation3(data, hand, pub, a, i + 1, count2 + 1, except, leftpub, otherhand);
+				permutation3(data, hand, pub, a, i + 1, count2 + 1, except, leftpub, otherhand, index);
 			}
 		}
 	}
 
-	public static void calc(CalcData data, int[] hand, int[] pub, int[] leftpub, int[] otherhand)
+	public static void calc(CalcData data, int[] hand, int[] pub, int[] leftpub, int[] otherhand, CalcShowData index)
 	{
 		ArrayList<Byte> my = new ArrayList<>();
 		ArrayList<Byte> other = new ArrayList<>();
@@ -319,5 +348,21 @@ public class GenHandUtil
 			data.win++;
 		}
 		data.total++;
+
+		if (totalcalc > 100000000)
+		{
+			index.num++;
+			int cur = (int) (index.num * 1000 / totalcalc);
+			if (cur != index.last)
+			{
+				index.last = cur;
+
+				long now = System.currentTimeMillis();
+				float per = (float) (now - index.begin) / index.num;
+				System.out.println("N" + N + " " + cur + "‰ 需要" + per * (totalcalc - index.num) / 60 / 1000 + "分"
+						+ " 用时" + (now - index.begin) / 60 / 1000 + "分" + " 速度"
+						+ index.num / ((float) (now - index.begin) / 1000) + "条/秒");
+			}
+		}
 	}
 }

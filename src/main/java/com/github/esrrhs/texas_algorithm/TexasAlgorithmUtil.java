@@ -153,7 +153,7 @@ public class TexasAlgorithmUtil
 
 	private static void genHand()
 	{
-		for (int i = 4; i >= 0; i--)
+		for (int i = 0; i <= 4; i++)
 		{
 			GenHandUtil.N = i;
 			GenHandUtil.genKey();
