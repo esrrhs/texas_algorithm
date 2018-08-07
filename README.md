@@ -26,7 +26,7 @@ float p = TexasAlgorithmUtil.getHandProbability("方3,方A", "黑2,黑4,黑5,黑
 
 ## 生成表玩玩
 * 解压texas_algorithm.rar到当前文件夹
-* 运行TexasAlgorithmUtil.Main
+* 运行TexasAlgorithmUtil.Main,需要添加vm参数-Xmx8000m
 
 # 查表算法
 查表算法，给定任意7张牌（5张和6张也支持），查表给出5张最大牌的牌面以及大小、胜率、类型
