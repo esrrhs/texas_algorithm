@@ -592,7 +592,7 @@ public class TexasAlgorithmUtil
 
 	public static List<Byte> getMax(List<Byte> pokes)
 	{
-		if (pokes.size() != 7)
+		if (pokes.size() < 5 || pokes.size() > 7)
 		{
 			return new ArrayList<>();
 		}
@@ -601,11 +601,10 @@ public class TexasAlgorithmUtil
 		hand.add(pokes.get(1));
 
 		List<Byte> pub = new ArrayList<>();
-		pub.add(pokes.get(2));
-		pub.add(pokes.get(3));
-		pub.add(pokes.get(4));
-		pub.add(pokes.get(5));
-		pub.add(pokes.get(6));
+		for (int i = 2; i < pokes.size(); i++)
+		{
+			pub.add(pokes.get(i));
+		}
 
 		return getMax(hand, pub);
 	}
