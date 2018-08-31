@@ -344,6 +344,7 @@ public class GenUtil
 		cs1.add(new Poke((byte) (k1 % 1000000L / 10000L)));
 		cs1.add(new Poke((byte) (k1 % 10000L / 100L)));
 		cs1.add(new Poke((byte) (k1 % 100L / 1L)));
+		Collections.sort(cs1, new TexasCardUtil.TexasPokeLogicValueComparator());
 
 		ArrayList<Poke> cs2 = new ArrayList<>();
 		cs2.add(new Poke((byte) (k2 % 10000000000L / 100000000L)));
@@ -351,6 +352,7 @@ public class GenUtil
 		cs2.add(new Poke((byte) (k2 % 1000000L / 10000L)));
 		cs2.add(new Poke((byte) (k2 % 10000L / 100L)));
 		cs2.add(new Poke((byte) (k2 % 100L / 1L)));
+		Collections.sort(cs2, new TexasCardUtil.TexasPokeLogicValueComparator());
 
 		return TexasCardUtil.compareCards(cs1, cs2) == 0;
 	}
