@@ -442,8 +442,8 @@ public class TexasCardUtil
 				int secondValue = secondCards.get(0).getValue();
 				int firstValue = firstCards.get(0).getValue();
 
-				boolean firstMin = (firstValue == (firstCards.get(0).getValue() + 9)); //是最小顺子吗 第一张5 第五张14
-				boolean secondMin = (secondValue == (secondCards.get(0).getValue() + 9));
+				boolean firstMin = (firstCards.get(4).getValue() == (firstCards.get(0).getValue() - 12)); //是最小顺子吗 第一张5 第五张14
+				boolean secondMin = (secondCards.get(4).getValue() == (secondCards.get(0).getValue() - 12));
 
 				if (firstMin == true && secondMin == false)
 				{//第一个是最小顺子 第一个小于第二个
