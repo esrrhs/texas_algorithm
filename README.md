@@ -77,3 +77,7 @@ P1、P2都已经拿到，根据P1和P2的关系用P1Max和P1Min做下差值即�
 
 #### 预估误差
 如果采用最原始的方法穷举所有组合，即固定手牌和固定公牌，穷举剩下公牌和对方手牌，并计算胜率，目前2张手牌4张公牌需要20多天才能计算完，并且数据量已经超标。通过和实际胜率比较，误差大部分在0.1以内，比如实际胜率0.5，预估0.6。
+
+## 其他
+<a href="https://github.com/esrrhs/majiang_algorithm">麻将算法</a>
+<a href="https://github.com/esrrhs/teenpatti_algorithm">印度炸金花算法</a>
