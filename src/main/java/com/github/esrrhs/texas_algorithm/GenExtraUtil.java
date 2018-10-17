@@ -3,7 +3,6 @@ package com.github.esrrhs.texas_algorithm;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class GenExtraUtil
@@ -17,7 +16,7 @@ public class GenExtraUtil
 	public static int N = 6;
 	public static ArrayList<Long> keys = new ArrayList<>();
 	public static AtomicInteger progress = new AtomicInteger();
-	public static boolean useOpt = true;
+	public static boolean useOpt = GenUtil.useOpt;
 
 	public static void genKey()
 	{
@@ -46,34 +45,17 @@ public class GenExtraUtil
 
 	private static void genCard() throws Exception
 	{
-		ArrayList<Integer> list = new ArrayList<>();
-		for (byte i = 0; i < 4; ++i)
-		{
-			for (byte j = 0; j < genNum / 4; ++j)
-			{
-				list.add((Integer) (int) (new Poke(i, (byte) (j + 2))).toByte());
-			}
-		}
-		Collections.sort(list);
+		ArrayList<Integer> list = GenUtil.genAllCards();
 
 		int[] tmp = new int[N];
-		permutation(list, 0, 0, N, tmp);
-	}
-
-	public static void permutation(ArrayList<Integer> a, int count, int count2, int except, int[] tmp) throws Exception
-	{
-		if (count2 == except)
-		{
-			genCardSave(tmp);
-		}
-		else
-		{
-			for (int i = count; i < a.size(); i++)
+		GenUtil.PermutationRun permutationRun = new GenUtil.PermutationRun() {
+			@Override
+			public void run(int[] tmp, GenUtil.PermutationParam permutationParam) throws Exception
 			{
-				tmp[count2] = a.get(i);
-				permutation(a, i + 1, count2 + 1, except, tmp);
+				genCardSave(tmp);
 			}
-		}
+		};
+		GenUtil.permutation(permutationRun, list, 0, 0, N, tmp, null);
 	}
 
 	private static void genCardSave(int[] tmp) throws Exception

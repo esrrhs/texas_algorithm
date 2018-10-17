@@ -236,7 +236,10 @@ public class GenOptUtil
 		int[] color = new int[4];
 		for (Integer i : cs)
 		{
-			color[i >> 4]++;
+			if (!Poke.isGui(i))
+			{
+				color[i >> 4]++;
+			}
 		}
 
 		int maxColor = 0;

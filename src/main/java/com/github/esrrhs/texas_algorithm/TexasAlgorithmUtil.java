@@ -87,6 +87,7 @@ public class TexasAlgorithmUtil
 		genTrans();
 		genTransOpt();
 		genHand();
+		System.out.println("done!");
 	}
 
 	private static void gen()
