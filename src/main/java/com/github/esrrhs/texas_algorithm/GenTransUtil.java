@@ -55,34 +55,17 @@ public class GenTransUtil
 
 	private static void genCard() throws Exception
 	{
-		ArrayList<Integer> list = new ArrayList<>();
-		for (byte i = 0; i < 4; ++i)
-		{
-			for (byte j = 0; j < genNum / 4; ++j)
-			{
-				list.add((Integer) (int) (new Poke(i, (byte) (j + 2))).toByte());
-			}
-		}
-		Collections.sort(list);
+		ArrayList<Integer> list = GenUtil.genAllCards();
 
 		int[] tmp = new int[N];
-		permutation(list, 0, 0, N, tmp);
-	}
-
-	public static void permutation(ArrayList<Integer> a, int count, int count2, int except, int[] tmp) throws Exception
-	{
-		if (count2 == except)
-		{
-			genCardSave(tmp);
-		}
-		else
-		{
-			for (int i = count; i < a.size(); i++)
+		GenUtil.PermutationRun permutationRun = new GenUtil.PermutationRun() {
+			@Override
+			public void run(int[] tmp, GenUtil.PermutationParam permutationParam) throws Exception
 			{
-				tmp[count2] = a.get(i);
-				permutation(a, i + 1, count2 + 1, except, tmp);
+				genCardSave(tmp);
 			}
-		}
+		};
+		GenUtil.permutation(permutationRun, list, 0, 0, N, tmp, null);
 	}
 
 	private static void genCardSave(int[] tmp) throws Exception
@@ -155,8 +138,8 @@ public class GenTransUtil
 
 					long now = System.currentTimeMillis();
 					float per = (float) (now - beginPrint) / totalKey;
-					System.out.println("step1 N" + N + " " + cur + "% 需要" + per * (GenUtil.total - totalKey) / 60 / 1000 + "分"
-							+ " 用时" + (now - beginPrint) / 60 / 1000 + "分" + " 速度"
+					System.out.println("step1 N" + N + " " + cur + "% 需要" + per * (GenUtil.total - totalKey) / 60 / 1000
+							+ "分" + " 用时" + (now - beginPrint) / 60 / 1000 + "分" + " 速度"
 							+ totalKey / ((float) (now - beginPrint) / 1000) + "条/秒");
 				}
 			}
@@ -182,8 +165,8 @@ public class GenTransUtil
 
 					long now = System.currentTimeMillis();
 					float per = (float) (now - beginPrint) / totalKey;
-					System.out.println("step2 N" + N + " " + cur + "% 需要" + per * (GenUtil.total - totalKey) / 60 / 1000 + "分"
-							+ " 用时" + (now - beginPrint) / 60 / 1000 + "分" + " 速度"
+					System.out.println("step2 N" + N + " " + cur + "% 需要" + per * (GenUtil.total - totalKey) / 60 / 1000
+							+ "分" + " 用时" + (now - beginPrint) / 60 / 1000 + "分" + " 速度"
 							+ totalKey / ((float) (now - beginPrint) / 1000) + "条/秒");
 				}
 			}
@@ -212,30 +195,20 @@ public class GenTransUtil
 		Collections.sort(list);
 
 		int[] tmp = new int[N];
-		permutationKey(ret, list, 0, 0, N, tmp);
+		GenUtil.PermutationRun permutationRun = new GenUtil.PermutationRun() {
+			@Override
+			public void run(int[] tmp, GenUtil.PermutationParam permutationParam) throws Exception
+			{
+				long c = GenUtil.genCardBind(tmp);
+				if (!ret.contains(c))
+				{
+					ret.add(c);
+				}
+			}
+		};
+		GenUtil.permutation(permutationRun, list, 0, 0, N, tmp, null);
 
 		return ret;
-	}
-
-	public static void permutationKey(ArrayList<Long> ret, ArrayList<Integer> a, int count, int count2, int except,
-			int[] tmp) throws Exception
-	{
-		if (count2 == except)
-		{
-			long c = GenUtil.genCardBind(tmp);
-			if (!ret.contains(c))
-			{
-				ret.add(c);
-			}
-		}
-		else
-		{
-			for (int i = count; i < a.size(); i++)
-			{
-				tmp[count2] = a.get(i);
-				permutationKey(ret, a, i + 1, count2 + 1, except, tmp);
-			}
-		}
 	}
 
 }

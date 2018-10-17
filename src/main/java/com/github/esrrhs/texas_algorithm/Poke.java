@@ -24,7 +24,7 @@ public final class Poke implements Cloneable
 	public static final byte PokeColor_MEI = 1;
 	public static final byte PokeColor_FANG = 0;
 
-	public static final Poke POKE_INVALID = new Poke((byte) 0, (byte) 0);
+	public static final Poke GUI = new Poke((byte) 5, (byte) 8);
 
 	public byte color;
 	public byte value;
@@ -44,6 +44,19 @@ public final class Poke implements Cloneable
 	{
 		this.color = (byte) (byteValue >> 4);
 		this.value = (byte) (byteValue % 16);
+	}
+
+	public static boolean isGui(int i)
+	{
+		byte color = (byte) (i >> 4);
+		byte value = (byte) (i % 16);
+
+		return value == GUI.value && color == GUI.color;
+	}
+
+	public boolean isGui()
+	{
+		return value == GUI.value && color == GUI.color;
 	}
 
 	public void setColor(byte color)
@@ -85,6 +98,10 @@ public final class Poke implements Cloneable
 	@Override
 	public String toString()
 	{
+		if (isGui())
+		{
+			return "鬼";
+		}
 		return String.format("%s%s", huaseName[this.color], valueName[this.value]);
 	}
 

@@ -185,7 +185,87 @@ public class TexasCardUtil
 		return analyseResult;
 	}
 
-	public static int fiveFromSeven(ArrayList<Poke> cards, ArrayList<Poke> pickedCards)
+	public static void fiveFromSeven(ArrayList<Poke> cards, ArrayList<Poke> pickedCards)
+	{
+		int gui = 0;
+		for (Poke poke : cards)
+		{
+			if (poke.isGui())
+			{
+				gui++;
+			}
+		}
+
+		if (gui == 0)
+		{
+			fiveFromSevenWithoutGui(cards, pickedCards);
+			return;
+		}
+
+		ArrayList<Poke> left = new ArrayList<>();
+		for (Poke poke : cards)
+		{
+			if (!poke.isGui())
+			{
+				left.add(poke);
+			}
+		}
+
+		int[] tmp = new int[gui];
+		GenUtil.PermutationRun permutationRun = new GenUtil.PermutationRun() {
+			@Override
+			public void run(int[] tmp, GenUtil.PermutationParam permutationParam) throws Exception
+			{
+				for (int t : tmp)
+				{
+					if (left.contains(t) || t == Poke.GUI.toByte())
+					{
+						return;
+					}
+				}
+
+				ArrayList<Poke> last = new ArrayList<>();
+				last.addAll(left);
+				for (int t : tmp)
+				{
+					last.add(new Poke((byte) t));
+				}
+				ArrayList<Poke> pickedCards = (ArrayList<Poke>) permutationParam.o1;
+				fiveFromSevenWithoutGui(last, pickedCards);
+				ArrayList<Poke> max = (ArrayList<Poke>) permutationParam.o2;
+				if (max.isEmpty())
+				{
+					max.clear();
+					max.addAll(pickedCards);
+				}
+				else
+				{
+					if (compareCardsWithoutGui(pickedCards, max) < 0)
+					{
+						max.clear();
+						max.addAll(pickedCards);
+					}
+				}
+			}
+		};
+		GenUtil.PermutationParam permutationParam = new GenUtil.PermutationParam();
+		permutationParam.o1 = new ArrayList<Poke>();
+		permutationParam.o2 = new ArrayList<Poke>();
+		try
+		{
+			GenUtil.permutation(permutationRun, GenUtil.allCards, 0, 0, gui, tmp, permutationParam);
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+
+		ArrayList<Poke> max = (ArrayList<Poke>) permutationParam.o2;
+		pickedCards.clear();
+		pickedCards.addAll(max);
+	}
+
+	public static void fiveFromSevenWithoutGui(ArrayList<Poke> cards, ArrayList<Poke> pickedCards)
 	{
 		if (pickedCards == null)
 		{
@@ -239,7 +319,6 @@ public class TexasCardUtil
 				}
 			}
 		}
-		return cardType;
 	}
 
 	public static int fiveFromSix(ArrayList<Poke> cards, ArrayList<Poke> pickedCards)
@@ -298,8 +377,13 @@ public class TexasCardUtil
 		return cardType;
 	}
 
-	//需要是拍好序的牌
 	public static int compareCards(ArrayList<Poke> firstCards, ArrayList<Poke> secondCards)
+	{
+		return compareCardsWithoutGui(firstCards, secondCards);
+	}
+
+	//需要是拍好序的牌
+	public static int compareCardsWithoutGui(ArrayList<Poke> firstCards, ArrayList<Poke> secondCards)
 	{
 		int firstType = getCardType(firstCards);
 		int secondType = getCardType(secondCards);

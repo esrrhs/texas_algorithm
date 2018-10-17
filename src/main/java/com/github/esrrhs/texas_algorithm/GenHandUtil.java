@@ -93,97 +93,76 @@ public class GenHandUtil
 
 	private static void genCard() throws Exception
 	{
-		ArrayList<Integer> list = new ArrayList<>();
-		for (byte i = 0; i < 4; ++i)
-		{
-			for (byte j = 0; j < genNum / 4; ++j)
-			{
-				list.add((Integer) (int) (new Poke(i, (byte) (j + 2))).toByte());
-			}
-		}
-		Collections.sort(list);
+		ArrayList<Integer> list = GenUtil.genAllCards();
 
 		int[] hand = new int[2];
-		permutation(list, 0, 0, 2, hand);
+		GenUtil.PermutationRun permutationRun = new GenUtil.PermutationRun() {
+			@Override
+			public void run(int[] tmp, GenUtil.PermutationParam permutationParam) throws Exception
+			{
+				onHandGen(tmp, permutationParam);
+			}
+		};
+		GenUtil.permutation(permutationRun, list, 0, 0, 2, hand, new GenUtil.PermutationParam());
 	}
 
-	public static void permutation(ArrayList<Integer> a, int count, int count2, int except, int[] hand) throws Exception
+	private static void onHandGen(int[] hand, GenUtil.PermutationParam permutationParam) throws Exception
 	{
-		if (count2 == except)
+		permutationParam.o1 = hand;
+
+		File file = new File("hand" + N + "/texas_hand_" + GenUtil.toString(hand[0] * 100 + hand[1]) + ".txt");
+		if (!file.exists())
 		{
-			File file = new File("hand" + N + "/texas_hand_" + GenUtil.toString(hand[0] * 100 + hand[1]) + ".txt");
-			if (!file.exists())
-			{
-				ArrayList<Integer> list1 = new ArrayList<>();
-				for (byte i = 0; i < 4; ++i)
+			ArrayList<Integer> list1 = GenUtil.genAllCards();
+			list1.remove((Integer) hand[0]);
+			list1.remove((Integer) hand[1]);
+
+			file.createNewFile();
+			FileOutputStream out = new FileOutputStream(file, true);
+			permutationParam.o2 = out;
+
+			int[] pub = new int[N];
+			GenUtil.PermutationRun permutationRun = new GenUtil.PermutationRun() {
+				@Override
+				public void run(int[] tmp, GenUtil.PermutationParam permutationParam) throws Exception
 				{
-					for (byte j = 0; j < genNum / 4; ++j)
-					{
-						int z = (Integer) (int) (new Poke(i, (byte) (j + 2))).toByte();
-						if (hand[0] != z && hand[1] != z)
-						{
-							list1.add(z);
-						}
-					}
+					onPubGen(tmp, permutationParam);
 				}
-				Collections.sort(list1);
-
-				file.createNewFile();
-				FileOutputStream out = new FileOutputStream(file, true);
-
-				int[] pub = new int[N];
-				permutation1(out, list1, 0, 0, N, pub, hand);
-			}
-		}
-		else
-		{
-			for (int i = count; i < a.size(); i++)
-			{
-				hand[count2] = a.get(i);
-				permutation(a, i + 1, count2 + 1, except, hand);
-			}
+			};
+			GenUtil.permutation(permutationRun, list1, 0, 0, N, pub, permutationParam);
 		}
 	}
 
-	public static void permutation1(FileOutputStream out, ArrayList<Integer> a, int count, int count2, int except,
-			int[] pub, int[] hand) throws Exception
+	private static void onPubGen(int[] pub, GenUtil.PermutationParam permutationParam) throws Exception
 	{
-		if (count2 == except)
+		int[] hand = (int[]) permutationParam.o1;
+		FileOutputStream out = (FileOutputStream) permutationParam.o2;
+
+		if (GenHandUtil.count.get() >= FALLBACK * N_THREADS)
 		{
-			if (GenHandUtil.count.get() >= FALLBACK * N_THREADS)
-			{
-				genCardSave(out, hand, pub);
-			}
-			else
-			{
-				GenHandUtil.count.getAndIncrement();
-				final int[] fpub = Arrays.copyOf(pub, pub.length);
-				final int[] fhand = Arrays.copyOf(hand, hand.length);
-				final FileOutputStream fout = out;
-				pool.execute(new Runnable() {
-					@Override
-					public void run()
-					{
-						try
-						{
-							genCardSave(fout, fhand, fpub);
-						}
-						catch (Exception e)
-						{
-							e.printStackTrace();
-						}
-						GenHandUtil.count.getAndDecrement();
-					}
-				});
-			}
+			genCardSave(out, hand, pub);
 		}
 		else
 		{
-			for (int i = count; i < a.size(); i++)
-			{
-				pub[count2] = a.get(i);
-				permutation1(out, a, i + 1, count2 + 1, except, pub, hand);
-			}
+			GenHandUtil.count.getAndIncrement();
+			final int[] fpub = Arrays.copyOf(pub, pub.length);
+			final int[] fhand = Arrays.copyOf(hand, hand.length);
+			final FileOutputStream fout = out;
+			pool.execute(new Runnable() {
+				@Override
+				public void run()
+				{
+					try
+					{
+						genCardSave(fout, fhand, fpub);
+					}
+					catch (Exception e)
+					{
+						e.printStackTrace();
+					}
+					GenHandUtil.count.getAndDecrement();
+				}
+			});
 		}
 	}
 
@@ -226,15 +205,7 @@ public class GenHandUtil
 
 	private static double calc(long key, int[] hand, int[] pub) throws Exception
 	{
-		ArrayList<Integer> list = new ArrayList<>();
-		for (byte i = 0; i < 4; ++i)
-		{
-			for (byte j = 0; j < genNum / 4; ++j)
-			{
-				int z = (Integer) (int) (new Poke(i, (byte) (j + 2))).toByte();
-				list.add(z);
-			}
-		}
+		ArrayList<Integer> list = GenUtil.genAllCards();
 
 		for (Integer p : hand)
 		{
@@ -251,57 +222,61 @@ public class GenHandUtil
 		CalcShowData index = new CalcShowData();
 		index.begin = System.currentTimeMillis();
 
+		GenUtil.PermutationRun permutationRun = new GenUtil.PermutationRun() {
+			@Override
+			public void run(int[] tmp, GenUtil.PermutationParam permutationParam) throws Exception
+			{
+				onOtherHandGen(tmp, permutationParam);
+			}
+		};
 		int[] otherhand = new int[2];
-		permutation2(data, hand, pub, list, 0, 0, 2, otherhand, index);
+		GenUtil.PermutationParam permutationParam = new GenUtil.PermutationParam();
+		permutationParam.o1 = data;
+		permutationParam.o2 = hand;
+		permutationParam.o3 = pub;
+		permutationParam.o4 = index;
+		permutationParam.o5 = list;
+		GenUtil.permutation(permutationRun, list, 0, 0, 2, otherhand, permutationParam);
 
 		return ((double) data.win + (double) data.tie * 0.5) / data.total;
 	}
 
-	public static void permutation2(CalcData data, int[] hand, int[] pub, ArrayList<Integer> a, int count, int count2,
-			int except, int[] otherhand, CalcShowData index) throws Exception
+	private static void onOtherHandGen(int[] otherhand, GenUtil.PermutationParam permutationParam) throws Exception
 	{
-		if (count2 == except)
+		ArrayList<Integer> a = (ArrayList<Integer>) permutationParam.o5;
+		for (Integer p : otherhand)
 		{
-			for (Integer p : otherhand)
-			{
-				a.remove((Integer) p);
-			}
-			Collections.sort(a);
-
-			int[] leftpub = new int[5 - N];
-			permutation3(data, hand, pub, a, 0, 0, 5 - N, leftpub, otherhand, index);
-
-			for (Integer p : otherhand)
-			{
-				a.add((Integer) p);
-			}
-			Collections.sort(a);
+			a.remove((Integer) p);
 		}
-		else
+		Collections.sort(a);
+
+		GenUtil.PermutationRun permutationRun = new GenUtil.PermutationRun() {
+			@Override
+			public void run(int[] tmp, GenUtil.PermutationParam permutationParam) throws Exception
+			{
+				onLeftPubGen(tmp, permutationParam);
+			}
+		};
+		int[] leftpub = new int[5 - N];
+		permutationParam.o6 = otherhand;
+		GenUtil.permutation(permutationRun, a, 0, 0, 5 - N, leftpub, permutationParam);
+
+		for (Integer p : otherhand)
 		{
-			for (int i = count; i < a.size(); i++)
-			{
-				otherhand[count2] = a.get(i);
-				permutation2(data, hand, pub, a, i + 1, count2 + 1, except, otherhand, index);
-			}
+			a.add((Integer) p);
 		}
+		Collections.sort(a);
 	}
 
-	public static void permutation3(CalcData data, int[] hand, int[] pub, ArrayList<Integer> a, int count, int count2,
-			int except, int[] leftpub, int[] otherhand, CalcShowData index) throws Exception
+	private static void onLeftPubGen(int[] leftpub, GenUtil.PermutationParam permutationParam) throws Exception
 	{
-		if (count2 == except)
-		{
-			calc(data, hand, pub, leftpub, otherhand, index);
-		}
-		else
-		{
-			for (int i = count; i < a.size(); i++)
-			{
-				leftpub[count2] = a.get(i);
-				permutation3(data, hand, pub, a, i + 1, count2 + 1, except, leftpub, otherhand, index);
-			}
-		}
+		CalcData data = (CalcData) permutationParam.o1;
+		int[] hand = (int[]) permutationParam.o2;
+		int[] pub = (int[]) permutationParam.o3;
+		CalcShowData index = (CalcShowData) permutationParam.o4;
+		int[] otherhand = (int[]) permutationParam.o6;
+
+		calc(data, hand, pub, leftpub, otherhand, index);
 	}
 
 	public static void calc(CalcData data, int[] hand, int[] pub, int[] leftpub, int[] otherhand, CalcShowData index)

@@ -13,12 +13,14 @@ public class GenUtil
 	public static FileOutputStream out;
 	public static int lastPrint = 0;
 	public static long beginPrint;
-	public static final long genNum = 52;
+	public static final long genNum = 14;
+	public static final int guiNum = 2;
 	public static final long total = (genNum * (genNum - 1) * (genNum - 2) * (genNum - 3) * (genNum - 4) * (genNum - 5)
 			* (genNum - 6)) / (7 * 6 * 5 * 4 * 3 * 2);
 	public static ArrayList<Long> keys = new ArrayList<>();
 	public static AtomicInteger progress = new AtomicInteger();
-	public static boolean useOpt = true;
+	public static boolean useOpt = false;
+	public static final ArrayList<Integer> allCards = genAllCards();
 
 	public static void genKey()
 	{
@@ -36,7 +38,18 @@ public class GenUtil
 		}
 	}
 
-	private static void genCard() throws Exception
+	public static ArrayList<Poke> genAllPokes()
+	{
+		ArrayList<Poke> list = new ArrayList<>();
+		ArrayList<Integer> tmp = genAllCards();
+		for (Integer t : tmp)
+		{
+			list.add(new Poke((byte) (int) t));
+		}
+		return list;
+	}
+
+	public static ArrayList<Integer> genAllCards()
 	{
 		ArrayList<Integer> list = new ArrayList<>();
 		for (byte i = 0; i < 4; ++i)
@@ -46,33 +59,88 @@ public class GenUtil
 				list.add((Integer) (int) (new Poke(i, (byte) (j + 2))).toByte());
 			}
 		}
+		for (int i = 0; i < guiNum; i++)
+		{
+			list.add((Integer) (int) Poke.GUI.toByte());
+		}
 		Collections.sort(list);
-
-		int[] tmp = new int[7];
-		permutation(list, 0, 0, 7, tmp);
+		return list;
 	}
 
-	public static void permutation(ArrayList<Integer> a, int count, int count2, int except, int[] tmp) throws Exception
+	private static void genCard() throws Exception
+	{
+		ArrayList<Integer> list = genAllCards();
+
+		PermutationRun permutationRun = new PermutationRun() {
+			@Override
+			public void run(int[] tmp, PermutationParam permutationParam) throws Exception
+			{
+				genCardSave(tmp);
+			}
+		};
+		int[] tmp = new int[7];
+		permutation(permutationRun, list, 0, 0, 7, tmp, null);
+	}
+
+	public interface PermutationRun
+	{
+		void run(int[] tmp, PermutationParam permutationParam) throws Exception;
+	}
+
+	public static class PermutationParam
+	{
+		Object o1;
+		Object o2;
+		Object o3;
+		Object o4;
+		Object o5;
+		Object o6;
+	}
+
+	public static void permutation(PermutationRun permutationRun, ArrayList<Integer> a, int count, int count2,
+			int except, int[] tmp, PermutationParam permutationParam) throws Exception
 	{
 		if (count2 == except)
 		{
-			genCardSave(tmp);
+			permutationRun.run(tmp, permutationParam);
 		}
 		else
 		{
 			for (int i = count; i < a.size(); i++)
 			{
 				tmp[count2] = a.get(i);
-				permutation(a, i + 1, count2 + 1, except, tmp);
+				permutation(permutationRun, a, i + 1, count2 + 1, except, tmp, permutationParam);
 			}
 		}
+	}
+
+	public static boolean hasGui(int[] tmp)
+	{
+		for (int t : tmp)
+		{
+			if (Poke.isGui(t))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static void genCardSave(int[] tmp) throws Exception
 	{
 		final long c = genCardBind(tmp);
 
-		keys.add(c);
+		if (hasGui(tmp))
+		{
+			if (!keys.contains(c))
+			{
+				keys.add(c);
+			}
+		}
+		else
+		{
+			keys.add(c);
+		}
 		totalKey++;
 
 		int cur = (int) (totalKey * 100 / total);
@@ -105,11 +173,11 @@ public class GenUtil
 		{
 			if (i instanceof Integer)
 			{
-				ret = ret * 100 + ((Integer)i);
+				ret = ret * 100 + ((Integer) i);
 			}
 			else if (i instanceof Byte)
 			{
-				ret = ret * 100 + ((Byte)i);
+				ret = ret * 100 + ((Byte) i);
 			}
 		}
 		return ret;
