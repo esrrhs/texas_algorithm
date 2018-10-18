@@ -165,32 +165,42 @@ public class GenOptUtil
 		ArrayList<Integer> cs = new ArrayList<>();
 		if (k > 1000000000000L)
 		{
-			cs.add((int) (k % 100000000000000L / 1000000000000L) % 16);
+			cs.add((int) (k % 100000000000000L / 1000000000000L));
 		}
 		if (k > 10000000000L)
 		{
-			cs.add((int) (k % 1000000000000L / 10000000000L) % 16);
+			cs.add((int) (k % 1000000000000L / 10000000000L));
 		}
 		if (k > 100000000L)
 		{
-			cs.add((int) (k % 10000000000L / 100000000L) % 16);
+			cs.add((int) (k % 10000000000L / 100000000L));
 		}
 		if (k > 1000000L)
 		{
-			cs.add((int) (k % 100000000L / 1000000L) % 16);
+			cs.add((int) (k % 100000000L / 1000000L));
 		}
 		if (k > 10000L)
 		{
-			cs.add((int) (k % 1000000L / 10000L) % 16);
+			cs.add((int) (k % 1000000L / 10000L));
 		}
 		if (k > 100L)
 		{
-			cs.add((int) (k % 10000L / 100L) % 16);
+			cs.add((int) (k % 10000L / 100L));
 		}
 		if (k > 1L)
 		{
-			cs.add((int) (k % 100L / 1L) % 16);
+			cs.add((int) (k % 100L / 1L));
 		}
+
+		for (int i = 0; i < cs.size(); i++)
+		{
+			if (!Poke.isGui(i))
+			{
+				int c = cs.get(i);
+				cs.set(i, (Poke.PokeColor_FANG << 4 | (c % 16)));
+			}
+		}
+
 		Collections.sort(cs);
 
 		long ret = 0;
@@ -254,14 +264,17 @@ public class GenOptUtil
 
 		for (int i = 0; i < cs.size(); i++)
 		{
-			int c = cs.get(i);
-			if ((c >> 4) == maxColor)
+			if (!Poke.isGui(i))
 			{
-				cs.set(i, (Poke.PokeColor_HEI << 4 | (c % 16)));
-			}
-			else
-			{
-				cs.set(i, (Poke.PokeColor_FANG << 4 | (c % 16)));
+				int c = cs.get(i);
+				if ((c >> 4) == maxColor)
+				{
+					cs.set(i, (Poke.PokeColor_HEI << 4 | (c % 16)));
+				}
+				else
+				{
+					cs.set(i, (Poke.PokeColor_FANG << 4 | (c % 16)));
+				}
 			}
 		}
 
