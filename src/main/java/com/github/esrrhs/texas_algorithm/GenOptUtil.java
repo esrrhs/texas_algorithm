@@ -194,9 +194,9 @@ public class GenOptUtil
 
 		for (int i = 0; i < cs.size(); i++)
 		{
-			if (!Poke.isGui(i))
+			int c = cs.get(i);
+			if (!Poke.isGui(c))
 			{
-				int c = cs.get(i);
 				cs.set(i, (Poke.PokeColor_FANG << 4 | (c % 16)));
 			}
 		}
@@ -264,9 +264,9 @@ public class GenOptUtil
 
 		for (int i = 0; i < cs.size(); i++)
 		{
-			if (!Poke.isGui(i))
+			int c = cs.get(i);
+			if (!Poke.isGui(c))
 			{
-				int c = cs.get(i);
 				if ((c >> 4) == maxColor)
 				{
 					cs.set(i, (Poke.PokeColor_HEI << 4 | (c % 16)));

@@ -586,6 +586,11 @@ public class TexasAlgorithmUtil
 
 		}
 
+		while (ret.size() < 5)
+		{
+			ret.add(Poke.GUI.toByte());
+		}
+
 		Collections.sort(ret);
 
 		return ret;
