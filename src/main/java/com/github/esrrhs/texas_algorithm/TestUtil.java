@@ -16,6 +16,7 @@ public class TestUtil
 		System.out.println(TexasAlgorithmUtil.getWinProbability(cards));
 		System.out.println(TexasAlgorithmUtil.keyToStr(TexasAlgorithmUtil.getWinMax(cards)));
 		System.out.println(TexasAlgorithmUtil.getWinType(cards));
+        System.out.println(TexasAlgorithmUtil.getMax(cards));
 
 		System.out.println(TexasAlgorithmUtil.getWinPosition(cards1));
 		System.out.println(TexasAlgorithmUtil.getWinProbability(cards1));

@@ -262,7 +262,7 @@ public class GenUtil
 		}
 		else if (cs.size() == 5)
 		{
-			pickedCards1.addAll(cs);
+			TexasCardUtil.fiveFromFive(cs, pickedCards1);
 		}
 
 		long ret = 0;
@@ -287,10 +287,10 @@ public class GenUtil
 		}
 		else if (cs.size() == 5)
 		{
-			pickedCards1.addAll(cs);
+			TexasCardUtil.fiveFromFive(cs, pickedCards1);
 		}
 
-		return TexasCardUtil.getCardTypeUnordered(pickedCards1);
+		return TexasCardUtil.getCardTypeUnorderedWithoutGui(pickedCards1);
 	}
 
 	public static ArrayList<Poke> toArray(long k)
@@ -358,8 +358,7 @@ public class GenUtil
 			}
 			else if (cs1.size() == 5)
 			{
-				Collections.sort(cs1, new TexasCardUtil.TexasPokeLogicValueComparator());
-				pickedCards1.addAll(cs1);
+				TexasCardUtil.fiveFromFive(cs1, pickedCards1);
 			}
 
 			ArrayList<Poke> cs2 = toArray(k2);
@@ -374,11 +373,10 @@ public class GenUtil
 			}
 			else if (cs2.size() == 5)
 			{
-				Collections.sort(cs2, new TexasCardUtil.TexasPokeLogicValueComparator());
-				pickedCards2.addAll(cs2);
+				TexasCardUtil.fiveFromFive(cs2, pickedCards2);
 			}
 
-			return TexasCardUtil.compareCards(pickedCards1, pickedCards2) < 0;
+			return TexasCardUtil.compareCardsWithoutGui(pickedCards1, pickedCards2) < 0;
 		}
 	}
 
@@ -400,7 +398,7 @@ public class GenUtil
 		cs2.add(new Poke((byte) (k2 % 100L / 1L)));
 		Collections.sort(cs2, new TexasCardUtil.TexasPokeLogicValueComparator());
 
-		return TexasCardUtil.compareCards(cs1, cs2) == 0;
+		return TexasCardUtil.compareCardsWithoutGui(cs1, cs2) == 0;
 	}
 
 	public static void main(String[] args)
