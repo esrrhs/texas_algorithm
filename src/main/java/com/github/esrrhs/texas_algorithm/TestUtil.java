@@ -4,19 +4,36 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 
 public class TestUtil
 {
 	public static void main(String[] args)
 	{
 		TexasAlgorithmUtil.load();
+
+		String card = "方2,梅3,黑2,黑4,鬼";
+
+		List<Byte> tmp1 = TexasAlgorithmUtil.strToPokes(card);
+		ArrayList<Poke> tmp = GenUtil.toArray(GenUtil.genCardBind(tmp1));
+
+		ArrayList<Poke> pickedCards = new ArrayList<>();
+		TexasCardUtil.fiveFromFive(tmp, pickedCards);
+
+		List<Byte> guiTrans = new ArrayList<>();
+		System.out.println(TexasAlgorithmUtil.getMax(card, guiTrans));
+		System.out.println(TexasAlgorithmUtil.pokesToStr(guiTrans));
+		card = "方2,梅3,黑2,黑4,方4,鬼";
+		System.out.println(TexasAlgorithmUtil.getMax(card, guiTrans));
+		System.out.println(TexasAlgorithmUtil.pokesToStr(guiTrans));
+
 		String cards = "方4,方A,黑2,黑A,黑3,黑5,黑6";
 		String cards1 = "红8,方A,方2,黑8,黑3,黑5,黑7";
 		System.out.println(TexasAlgorithmUtil.getWinPosition(cards));
 		System.out.println(TexasAlgorithmUtil.getWinProbability(cards));
 		System.out.println(TexasAlgorithmUtil.keyToStr(TexasAlgorithmUtil.getWinMax(cards)));
 		System.out.println(TexasAlgorithmUtil.getWinType(cards));
-        System.out.println(TexasAlgorithmUtil.getMax(cards));
 
 		System.out.println(TexasAlgorithmUtil.getWinPosition(cards1));
 		System.out.println(TexasAlgorithmUtil.getWinProbability(cards1));
@@ -37,11 +54,11 @@ public class TestUtil
 		System.out.println(TexasAlgorithmUtil.keyToStr(TexasAlgorithmUtil.getWinMax(cards3)));
 		System.out.println(TexasAlgorithmUtil.getWinType(cards3));
 
-		System.out.println(TexasAlgorithmUtil.getMax("方4,方2", "黑2,黑A,方3,黑5,黑6"));
-		System.out.println(TexasAlgorithmUtil.getMax("方4,方2", "黑2,黑A,黑7,黑5,黑6"));
-		System.out.println(TexasAlgorithmUtil.getMax("黑2,黑3", "方2,方A,黑7,黑5,黑6"));
-		System.out.println(TexasAlgorithmUtil.getMax("黑2,黑3", "方2,方A,黑7,黑5"));
-		System.out.println(TexasAlgorithmUtil.getMax("黑2,黑3", "方2,黑7,黑5"));
+		System.out.println(TexasAlgorithmUtil.getMax("方4,方2", "黑2,黑A,方3,黑5,黑6", null));
+		System.out.println(TexasAlgorithmUtil.getMax("方4,方2", "黑2,黑A,黑7,黑5,黑6", null));
+		System.out.println(TexasAlgorithmUtil.getMax("黑2,黑3", "方2,方A,黑7,黑5,黑6", null));
+		System.out.println(TexasAlgorithmUtil.getMax("黑2,黑3", "方2,方A,黑7,黑5", null));
+		System.out.println(TexasAlgorithmUtil.getMax("黑2,黑3", "方2,黑7,黑5", null));
 
 		TexasAlgorithmUtil.loadProbility();
 		System.out.println(TexasAlgorithmUtil.getHandProbability("方3,方A", "黑2,黑4,黑5,黑K"));

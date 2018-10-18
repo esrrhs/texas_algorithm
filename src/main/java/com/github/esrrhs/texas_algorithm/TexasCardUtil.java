@@ -3,6 +3,7 @@ package com.github.esrrhs.texas_algorithm;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 
 public class TexasCardUtil
 {
@@ -200,11 +201,13 @@ public class TexasCardUtil
 		}
 
 		ArrayList<Poke> left = new ArrayList<>();
+		HashSet<Integer> leftMap = new HashSet<>();
 		for (Poke poke : cards)
 		{
 			if (!poke.isGui())
 			{
 				left.add(poke);
+				leftMap.add((int) poke.toByte());
 			}
 		}
 
@@ -215,7 +218,7 @@ public class TexasCardUtil
 			{
 				for (int t : tmp)
 				{
-					if (left.contains(t) || t == Poke.GUI.toByte())
+					if (leftMap.contains(t) || t == Poke.GUI.toByte())
 					{
 						return;
 					}
@@ -237,7 +240,7 @@ public class TexasCardUtil
 				}
 				else
 				{
-					if (compareCardsWithoutGui(pickedCards, max) < 0)
+					if (compareCardsWithoutGui(pickedCards, max) > 0)
 					{
 						max.clear();
 						max.addAll(pickedCards);
@@ -333,11 +336,13 @@ public class TexasCardUtil
 		}
 
 		ArrayList<Poke> left = new ArrayList<>();
+		HashSet<Integer> leftMap = new HashSet<>();
 		for (Poke poke : cards)
 		{
 			if (!poke.isGui())
 			{
 				left.add(poke);
+				leftMap.add((int) poke.toByte());
 			}
 		}
 
@@ -348,7 +353,7 @@ public class TexasCardUtil
 			{
 				for (int t : tmp)
 				{
-					if (left.contains(t) || t == Poke.GUI.toByte())
+					if (leftMap.contains(t) || t == Poke.GUI.toByte())
 					{
 						return;
 					}
@@ -370,7 +375,7 @@ public class TexasCardUtil
 				}
 				else
 				{
-					if (compareCardsWithoutGui(pickedCards, max) < 0)
+					if (compareCardsWithoutGui(pickedCards, max) > 0)
 					{
 						max.clear();
 						max.addAll(pickedCards);
@@ -397,6 +402,7 @@ public class TexasCardUtil
 
 	public static void fiveFromFiveWithoutGui(ArrayList<Poke> cards, ArrayList<Poke> pickedCards)
 	{
+		pickedCards.clear();
 		pickedCards.addAll(cards);
 		Collections.sort(pickedCards, new TexasCardUtil.TexasPokeLogicValueComparator());
 	}
@@ -419,11 +425,13 @@ public class TexasCardUtil
 		}
 
 		ArrayList<Poke> left = new ArrayList<>();
+		HashSet<Integer> leftMap = new HashSet<>();
 		for (Poke poke : cards)
 		{
 			if (!poke.isGui())
 			{
 				left.add(poke);
+				leftMap.add((int) poke.toByte());
 			}
 		}
 
@@ -434,7 +442,7 @@ public class TexasCardUtil
 			{
 				for (int t : tmp)
 				{
-					if (left.contains(t) || t == Poke.GUI.toByte())
+					if (leftMap.contains(t) || t == Poke.GUI.toByte())
 					{
 						return;
 					}
@@ -456,7 +464,7 @@ public class TexasCardUtil
 				}
 				else
 				{
-					if (compareCardsWithoutGui(pickedCards, max) < 0)
+					if (compareCardsWithoutGui(pickedCards, max) > 0)
 					{
 						max.clear();
 						max.addAll(pickedCards);
