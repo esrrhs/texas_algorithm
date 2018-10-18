@@ -14,7 +14,7 @@ public class GenUtil
 	public static int lastPrint = 0;
 	public static long beginPrint;
 	public static final int guiNum = 2;
-	public static final long genNum = 12 + (long) guiNum;
+	public static final long genNum = 52 + (long) guiNum;
 	public static final long total = (genNum * (genNum - 1) * (genNum - 2) * (genNum - 3) * (genNum - 4) * (genNum - 5)
 			* (genNum - 6)) / (7 * 6 * 5 * 4 * 3 * 2);
 	public static ArrayList<Long> keys = new ArrayList<>();
