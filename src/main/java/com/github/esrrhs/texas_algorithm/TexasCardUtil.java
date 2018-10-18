@@ -142,9 +142,7 @@ public class TexasCardUtil
 		for (int i = 0; i < cards.size(); ++i)
 		{
 			int sameCount = 1;
-			int[] sameCardData = new int[4];
 			int cardValue = cards.get(i).getValue();
-			//			log.info("i:{} value:{}", i, cardValue);
 
 			for (int j = i + 1; j < cards.size(); ++j)
 			{
@@ -154,7 +152,6 @@ public class TexasCardUtil
 				}
 				else
 				{
-					//					log.info("find same card. j:{} value:{}", j, cardValue);
 					sameCount++;
 				}
 			}
