@@ -360,6 +360,10 @@ public class TexasAlgorithmUtil
 		{
 			return (new Poke(Poke.PokeColor_HEI, strToPokeValue(str.substring(1)))).toByte();
 		}
+		else if (str.startsWith("鬼"))
+		{
+			return (new Poke(Poke.GUI.color, Poke.GUI.value)).toByte();
+		}
 		else
 		{
 			return 0;
@@ -371,7 +375,7 @@ public class TexasAlgorithmUtil
 		return GenUtil.toString(key);
 	}
 
-	public static List<Byte> keyToByte(long k)
+	public static List<Byte> keyToPoke(long k)
 	{
 		ArrayList<Byte> cs = new ArrayList<>();
 		if (k > 1000000000000L)
@@ -420,6 +424,11 @@ public class TexasAlgorithmUtil
 		return ret;
 	}
 
+	public static String pokesToStr(List<Byte> pokes)
+	{
+		return keyToStr(GenUtil.genCardBind(pokes));
+	}
+
 	public static KeyData getKeyData(String str)
 	{
 		List<Byte> pokes = strToPokes(str);
@@ -462,12 +471,12 @@ public class TexasAlgorithmUtil
 		return getKeyData(key);
 	}
 
-	public static String getMax(String str)
+	public static String getMax(String str, List<Byte> guiTrans)
 	{
-		return GenUtil.toString(GenUtil.genCardBind(getMax(strToPokes(str))));
+		return GenUtil.toString(GenUtil.genCardBind(getMax(strToPokes(str), guiTrans)));
 	}
 
-	public static List<Byte> getMax(List<Byte> hand, List<Byte> pub)
+	public static List<Byte> getMax(List<Byte> hand, List<Byte> pub, List<Byte> guiTrans)
 	{
 		List<Byte> ret = new ArrayList<>();
 		if (hand.size() != 2)
@@ -487,7 +496,7 @@ public class TexasAlgorithmUtil
 			return ret;
 		}
 
-		List<Byte> max = keyToByte(keyData.max);
+		List<Byte> max = keyToPoke(keyData.max);
 
 		List<Byte> pubtmp = new ArrayList<>();
 		pubtmp.addAll(pub);
@@ -591,12 +600,24 @@ public class TexasAlgorithmUtil
 			ret.add(Poke.GUI.toByte());
 		}
 
+		if (guiTrans != null)
+		{
+			guiTrans.clear();
+			for (int i = 0; i < max.size(); i++)
+			{
+				if (max.get(i) != 0)
+				{
+					guiTrans.add(max.get(i));
+				}
+			}
+		}
+
 		Collections.sort(ret);
 
 		return ret;
 	}
 
-	public static List<Byte> getMax(List<Byte> pokes)
+	public static List<Byte> getMax(List<Byte> pokes, List<Byte> guiTrans)
 	{
 		if (pokes.size() < 5 || pokes.size() > 7)
 		{
@@ -612,12 +633,12 @@ public class TexasAlgorithmUtil
 			pub.add(pokes.get(i));
 		}
 
-		return getMax(hand, pub);
+		return getMax(hand, pub, guiTrans);
 	}
 
-	public static String getMax(String hand, String pub)
+	public static String getMax(String hand, String pub, List<Byte> guiTrans)
 	{
-		return GenUtil.toString(GenUtil.genCardBind(getMax(strToPokes(hand), strToPokes(pub))));
+		return GenUtil.toString(GenUtil.genCardBind(getMax(strToPokes(hand), strToPokes(pub), guiTrans)));
 	}
 
 	public static int getWinPosition(String str)
@@ -762,7 +783,7 @@ public class TexasAlgorithmUtil
 
 	public static float getHandProbability(long hand, long pub)
 	{
-		return getHandProbability(keyToByte(hand), keyToByte(pub));
+		return getHandProbability(keyToPoke(hand), keyToPoke(pub));
 	}
 
 	public static float getHandProbability(List<Byte> hand, List<Byte> pub)
