@@ -13,8 +13,8 @@ public class GenUtil
 	public static FileOutputStream out;
 	public static int lastPrint = 0;
 	public static long beginPrint;
-	public static final long genNum = 14;
 	public static final int guiNum = 2;
+	public static final long genNum = 52 + (long) guiNum;
 	public static final long total = (genNum * (genNum - 1) * (genNum - 2) * (genNum - 3) * (genNum - 4) * (genNum - 5)
 			* (genNum - 6)) / (7 * 6 * 5 * 4 * 3 * 2);
 	public static ArrayList<Long> keys = new ArrayList<>();
@@ -114,33 +114,11 @@ public class GenUtil
 		}
 	}
 
-	public static boolean hasGui(int[] tmp)
-	{
-		for (int t : tmp)
-		{
-			if (Poke.isGui(t))
-			{
-				return true;
-			}
-		}
-		return false;
-	}
-
 	private static void genCardSave(int[] tmp) throws Exception
 	{
 		final long c = genCardBind(tmp);
 
-		if (hasGui(tmp))
-		{
-			if (!keys.contains(c))
-			{
-				keys.add(c);
-			}
-		}
-		else
-		{
-			keys.add(c);
-		}
+		keys.add(c);
 		totalKey++;
 
 		int cur = (int) (totalKey * 100 / total);
