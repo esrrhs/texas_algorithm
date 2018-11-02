@@ -1,5 +1,5 @@
 # 德州扑克算法
-用于德州扑克的算法，包括以下功能
+用于带鬼牌的德州扑克的算法，目前支持两张鬼，包括以下功能
 * 查表算法(内存占用十几M)
 * 评估算法(内存占用300M)
 
@@ -13,11 +13,11 @@
 ```
 ``` java
 // 获取2张手牌5张公牌的最大的5张牌
-TexasAlgorithmUtil.getMax("黑2,黑3", "方2,方A,黑7,黑5,黑6");
+TexasAlgorithmUtil.getMax("黑2,黑3", "方2,方A,黑7,黑5,鬼");
 // 获取7张牌的大小，用于比牌
-int win = TexasAlgorithmUtil.getWinPosition("方4,方A,黑2,黑A,黑3,黑5,黑6");
+int win = TexasAlgorithmUtil.getWinPosition("方4,方A,鬼,黑A,黑3,黑5,黑6");
 // 获取2张手牌4张公牌的胜率，用于评估
-float p = TexasAlgorithmUtil.getHandProbability("方3,方A", "黑2,黑4,黑5,黑K");
+float p = TexasAlgorithmUtil.getHandProbability("方3,鬼", "黑2,黑4,黑5,黑K");
 ```
 
 ## 测试玩玩
@@ -34,7 +34,7 @@ float p = TexasAlgorithmUtil.getHandProbability("方3,方A", "黑2,黑4,黑5,黑
 ### 算法实现
 
 #### 穷举C(52, 7)的组合
-52张牌里面选7张，一共有1亿多种组合，对7张牌进行编码变成long类型，得到一个1亿长度的数组。
+52张牌再加2张鬼牌里面选7张，一共有1亿多种组合，对7张牌进行编码变成long类型，得到一个1亿长度的数组。
 * 给定6张和5张，也是同理生成
 
 #### 多线程快速排序
