@@ -24,7 +24,7 @@ public class TestUtil
 		List<Byte> guiTrans = new ArrayList<>();
 		System.out.println(TexasAlgorithmUtil.getMax(card, guiTrans));
 		System.out.println(TexasAlgorithmUtil.pokesToStr(guiTrans));
-		card = "方2,梅3,黑2,黑4,方4,鬼";
+		card = "方2,鬼,黑2,黑4,黑5,鬼";
 		System.out.println(TexasAlgorithmUtil.getMax(card, guiTrans));
 		System.out.println(TexasAlgorithmUtil.pokesToStr(guiTrans));
 
