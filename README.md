@@ -13,11 +13,11 @@
 ```
 ``` java
 // 获取2张手牌5张公牌的最大的5张牌
-TexasAlgorithmUtil.getMax("黑2,黑3", "方2,方A,黑7,黑5,黑6");
+TexasAlgorithmUtil.getMax("黑2,黑3", "方2,方A,黑7,黑5,鬼");
 // 获取7张牌的大小，用于比牌
-int win = TexasAlgorithmUtil.getWinPosition("方4,方A,黑2,黑A,黑3,黑5,黑6");
+int win = TexasAlgorithmUtil.getWinPosition("方4,方A,鬼,黑A,黑3,黑5,黑6");
 // 获取2张手牌4张公牌的胜率，用于评估
-float p = TexasAlgorithmUtil.getHandProbability("方3,方A", "黑2,黑4,黑5,黑K");
+float p = TexasAlgorithmUtil.getHandProbability("方3,鬼", "黑2,黑4,黑5,黑K");
 ```
 
 ## 测试玩玩
