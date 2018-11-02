@@ -510,16 +510,20 @@ public class TexasAlgorithmUtil
 			int[] srccolor = new int[4];
 			for (int i = 0; i < tmp.size(); i++)
 			{
-				srccolor[tmp.get(i) >> 4]++;
+				if (!Poke.isGui(tmp.get(i)))
+				{
+					srccolor[tmp.get(i) >> 4]++;
+				}
 			}
 
 			int srcmaxColor = 0;
+			int srcmaxColorNum = 0;
 			for (int i = 0; i < srccolor.length; i++)
 			{
-				if (srccolor[i] >= 5)
+				if (srccolor[i] >= srcmaxColorNum)
 				{
 					srcmaxColor = i;
-					break;
+					srcmaxColorNum = srccolor[i];
 				}
 			}
 
