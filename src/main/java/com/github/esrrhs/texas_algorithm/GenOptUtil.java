@@ -253,12 +253,13 @@ public class GenOptUtil
 		}
 
 		int maxColor = 0;
+		int maxColorNum = 0;
 		for (int i = 0; i < color.length; i++)
 		{
-			if (color[i] >= 5)
+			if (color[i] > maxColorNum)
 			{
 				maxColor = i;
-				break;
+				maxColorNum = color[i];
 			}
 		}
 
