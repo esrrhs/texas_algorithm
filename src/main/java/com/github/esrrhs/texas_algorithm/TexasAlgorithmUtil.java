@@ -561,6 +561,14 @@ public class TexasAlgorithmUtil
 					}
 				}
 			}
+
+			for (int i = 0; i < max.size(); i++)
+			{
+				if (max.get(i) != 0)
+				{
+					max.set(i, (byte) (srcmaxColor << 4 | (max.get(i) % 16)));
+				}
+			}
 		}
 		else
 		{
