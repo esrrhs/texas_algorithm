@@ -572,11 +572,44 @@ public class TexasAlgorithmUtil
 		}
 		else
 		{
+			for (int j = 0; j < pubtmp.size(); j++)
+			{
+				for (int i = 0; i < max.size(); i++)
+				{
+					if (pubtmp.get(j) == max.get(i) && max.get(i) != 0 && pubtmp.get(j) != 0
+							&& !Poke.isGui(pubtmp.get(j)))
+					{
+						ret.add(pubtmp.get(j));
+
+						max.set(i, (byte) 0);
+						pubtmp.set(j, (byte) 0);
+						break;
+					}
+				}
+			}
+
+			for (int j = 0; j < handtmp.size(); j++)
+			{
+				for (int i = 0; i < max.size(); i++)
+				{
+					if (handtmp.get(j) == max.get(i) && max.get(i) != 0 && handtmp.get(j) != 0
+							&& !Poke.isGui(handtmp.get(j)))
+					{
+						ret.add(handtmp.get(j));
+
+						max.set(i, (byte) 0);
+						handtmp.set(j, (byte) 0);
+						break;
+					}
+				}
+			}
+
 			for (int i = 0; i < max.size(); i++)
 			{
 				for (int j = 0; j < pubtmp.size(); j++)
 				{
-					if ((pubtmp.get(j) % 16) == (max.get(i) % 16) && max.get(i) != 0 && pubtmp.get(j) != 0)
+					if ((pubtmp.get(j) % 16) == (max.get(i) % 16) && max.get(i) != 0 && pubtmp.get(j) != 0
+							&& !Poke.isGui(pubtmp.get(j)))
 					{
 						ret.add(pubtmp.get(j));
 
@@ -593,7 +626,8 @@ public class TexasAlgorithmUtil
 				{
 					for (int j = 0; j < handtmp.size(); j++)
 					{
-						if ((handtmp.get(j) % 16) == (max.get(i) % 16) && max.get(i) != 0 && handtmp.get(j) != 0)
+						if ((handtmp.get(j) % 16) == (max.get(i) % 16) && max.get(i) != 0 && handtmp.get(j) != 0
+								&& !Poke.isGui(handtmp.get(j)))
 						{
 							ret.add(handtmp.get(j));
 
