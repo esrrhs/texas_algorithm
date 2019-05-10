@@ -452,7 +452,7 @@ public class TexasAlgorithmUtil
 		}
 		if (normal == null)
 		{
-			return normal;
+			return color;
 		}
 		if (color.getIndex() > normal.getIndex())
 		{
@@ -460,7 +460,7 @@ public class TexasAlgorithmUtil
 		}
 		else
 		{
-			return color;
+			return normal;
 		}
 	}
 
