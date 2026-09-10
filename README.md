@@ -1,5 +1,7 @@
 # Texas Hold'em Algorithm (with Joker Support)
 
+[中文文档](README_CN.md)
+
 A high-performance Java library for Texas Hold'em poker with Joker (wild card) support. Supports up to **2 Jokers** and provides two independent subsystems:
 
 | Subsystem | Memory | Capability |
