@@ -1,83 +1,234 @@
-# 德州扑克算法
-用于带鬼牌的德州扑克的算法，目前支持两张鬼，包括以下功能
-* 查表算法(内存占用十几M)
-* 评估算法(内存占用300M)
+# Texas Hold'em Algorithm (with Joker Support)
 
-## 使用
-``` xml
+A high-performance Java library for Texas Hold'em poker with Joker (wild card) support. Supports up to **2 Jokers** and provides two independent subsystems:
+
+| Subsystem | Memory | Capability |
+|-----------|--------|------------|
+| **Lookup Table** | ~tens of MB | Best-hand evaluation, rank, type for 5–7 cards |
+| **Win Probability** | ~200 MB | 1v1 win probability estimate for 2 hole + 0–4 community cards |
+
+---
+
+## Maven Dependency
+
+```xml
 <dependency>
     <groupId>com.github.esrrhs</groupId>
     <artifactId>texas_algorithm</artifactId>
-    <version>1.0.12</version>
+    <version>1.0.13</version>
 </dependency>
 ```
-``` java
-// 获取2张手牌5张公牌的最大的5张牌
-TexasAlgorithmUtil.getMax("黑2,黑3", "方2,方A,黑7,黑5,鬼");
-// 获取7张牌的大小，用于比牌
-int win = TexasAlgorithmUtil.getWinPosition("方4,方A,鬼,黑A,黑3,黑5,黑6");
-// 获取2张手牌4张公牌的胜率，用于评估
+
+---
+
+## Quick Start
+
+### 1. Load Tables
+
+```java
+// Load lookup table (~tens of MB, required for hand evaluation)
+TexasAlgorithmUtil.load();
+
+// Load probability table (~200 MB, required for win probability estimation)
+TexasAlgorithmUtil.loadProbility();
+```
+
+### 2. Get Best 5-Card Hand
+
+```java
+// Get the best 5-card hand from 2 hole cards + 5 community cards
+// Returns a string of the best 5 cards
+String best = TexasAlgorithmUtil.getMax("黑2,黑3", "方2,方A,黑7,黑5,鬼");
+```
+
+### 3. Compare Hands (Hand Ranking)
+
+```java
+// Get the absolute rank of a 7-card hand (higher = stronger)
+// Used to compare two hands: whichever has a higher position wins
+int rank = TexasAlgorithmUtil.getWinPosition("方4,方A,鬼,黑A,黑3,黑5,黑6");
+
+// Compare two 7-card hands directly: returns positive if str1 > str2, 0 if equal, negative if str1 < str2
+int cmp = TexasAlgorithmUtil.compare("方4,方A,鬼,黑A,黑3,黑5,黑6", "黑2,红3,方7,梅9,方K,黑Q,红J");
+```
+
+### 4. Get Hand Type
+
+```java
+// Returns an integer constant for the hand type (see Hand Types below)
+int type = TexasAlgorithmUtil.getWinType("方4,方A,鬼,黑A,黑3,黑5,黑6");
+```
+
+### 5. Estimate Win Probability (1v1)
+
+```java
+// Estimate win probability given 2 hole cards + some community cards
+// Returns a float in [0, 1]
 float p = TexasAlgorithmUtil.getHandProbability("方3,鬼", "黑2,黑4,黑5,黑K");
 ```
 
-## 测试玩玩
-* 解压texas_algorithm.rar到当前文件夹
-* 运行TestUtil.Main
+---
 
-## 生成表玩玩
-* 解压texas_algorithm.rar到当前文件夹
-* 运行TexasAlgorithmUtil.Main,需要添加vm参数-Xmx8000m
+## Card Notation
 
-# 查表算法
-查表算法，给定任意7张牌（5张和6张也支持），查表给出5张最大牌的牌面以及大小、胜率、类型。查表方法很简单，下面讲一下生成表的算法。
+Cards are expressed as Chinese-character strings separated by commas.
 
-### 算法实现
+### Suits
 
-#### 穷举C(52, 7)的组合
-52张牌再加2张鬼牌里面选7张，一共有1亿多种组合，对7张牌进行编码变成long类型，得到一个1亿长度的数组。
-* 给定6张和5张，也是同理生成
+| Notation | Suit | English |
+|----------|------|---------|
+| `方` | ♦ | Diamond |
+| `梅` | ♣ | Club |
+| `红` | ♥ | Heart |
+| `黑` | ♠ | Spade |
+| `鬼` | Joker | Wild card |
 
-#### 多线程快速排序
-对这1亿长度的数组进行从小到大排序，排序依据就是7选5后的大小。使用多线程快速排序，在8核的机器上，排完大概需要10小时。
-* 如果把最终的查表算法替换原始的比牌算法，速度可以缩短到2小时。
+### Values
 
-#### 结果输出
-数组已经排好序，现在按照顺序输出到一个文件，内容有key、大小顺序、max牌的值、max牌的类型、可阅读的牌面信息。最后文件大小差不多12G。
-* 注意到大小其实是阶梯状的，就是有很多牌是一样大，但是先后顺序不同，所以在输出的时候，要再做一下比牌处理。
+`2` `3` `4` `5` `6` `7` `8` `9` `10` `J` `Q` `K` `A`
 
+### Examples
 
-#### 结果去色
-1亿条数据如果直接用，内存会爆，使用去色算法缩减规模。分为有花色和无花色两个文件，最后文件总大小18M。实际加载到内存占用几十M。
+```
+方A    = Diamond Ace
+黑K    = Spade King
+红10   = Heart Ten
+鬼     = Joker (wild card, can substitute any card)
+```
 
-* 对于同花的类型，比如同花、同花顺、皇家同花顺，7张牌的分布肯定是比如红红红红红梅黑，就是至少5张牌是同花色的，于是可以转变花色成为方方方方方黑黑，节省key值
-* 对于非同花的类型，花色毫无作用，那么只需要把花色全去掉，变成方方方方方方方即可
+---
 
-#### 查询方法
-给定7张牌，先去同花表里查，如果没有就去非同花表里查，两个都有就谁大选谁。
+## Hand Types
 
-# 评估算法
-评估算法，给定2张手牌，0-4张公牌，大致估算出这手牌在1v1情况下的胜率。
+The `getWinType()` method returns one of these constants from `TexasCardUtil`:
 
-### 算法实现
+| Constant | Value | Hand |
+|----------|-------|------|
+| `TEXAS_CARD_TYPE_GAOPAI` | 1 | High Card |
+| `TEXAS_CARD_TYPE_DUIZI` | 2 | One Pair |
+| `TEXAS_CARD_TYPE_LIANGDUI` | 3 | Two Pair |
+| `TEXAS_CARD_TYPE_SANTIAO` | 4 | Three of a Kind |
+| `TEXAS_CARD_TYPE_SHUNZI` | 5 | Straight |
+| `TEXAS_CARD_TYPE_TONGHUA` | 6 | Flush |
+| `TEXAS_CARD_TYPE_HULU` | 7 | Full House |
+| `TEXAS_CARD_TYPE_SITIAO` | 8 | Four of a Kind |
+| `TEXAS_CARD_TYPE_TONGHUASHUN` | 9 | Straight Flush |
+| `TEXAS_CARD_TYPE_KINGTONGHUASHUN` | 10 | Royal Flush |
 
-#### 胜率计算
-注意到前面已经生成了7张牌的大小顺序了，那么现在给定N张牌(2<=N<=6），只需要去7张牌的集合里遍历，看包含这N张牌的7张牌的胜率，做一下平均值就是平均胜率。顺便还会生出最大胜率最小胜率。5个输出文件最终大小是2G。
+---
 
-#### 结果去色
-这个N张牌的胜率表同样存在重复的，采用类似的方法去掉花色，分为两张表，查询先查询原始表，没有再去查询去掉花色的表。通过这种方法，6个文件可以缩减到300M。实际加载到内存差不多200M。
+## API Reference
 
-#### 公牌查询
-把公牌代入上面计算的胜率表中，查询得到公牌的胜率情况，也就是说对方用这个公牌去组成7张牌的平均胜率记为P1，以及最大和最小胜率P1Max和P1Min。
+### `TexasAlgorithmUtil`
 
-#### 手牌公牌查询
-把我的手牌和公牌加起来，代入上面的胜率表中，查询得到一个平均胜率P2。注意这时候P2是不准确的，因为手牌被重复使用了。这里存在误差。
+```java
+// Load / unload
+void load()                                   // Load lookup tables into memory
+void loadProbility()                          // Load probability tables into memory
 
-#### 胜率预估
-P1、P2都已经拿到，根据P1和P2的关系用P1Max和P1Min做下差值即可得出胜率。这里假定分布是均匀的所以也会有误差。
+// Best hand
+String getMax(String hand, String pub, ...)   // Best 5 cards from 2 hole + 3–5 community
+List<Byte> getMax(List<Byte> pokes, ...)      // Same, accepting byte lists
 
-#### 预估误差
-如果采用最原始的方法穷举所有组合，即固定手牌和固定公牌，穷举剩下公牌和对方手牌，并计算胜率，目前2张手牌4张公牌需要20多天才能计算完，并且数据量已经超标。通过和实际胜率比较，误差大部分在0.1以内，比如实际胜率0.5，预估0.6。
+// Hand evaluation (requires load())
+int    getWinPosition(String cards)           // Absolute rank among all combinations
+double getWinProbability(String cards)        // Win ratio vs. all same-size combinations
+int    getWinType(String cards)               // Hand type constant
+long   getWinMax(String cards)                // Encoded key of best 5-card hand
+int    compare(String str1, String str2)      // Compare two 7-card hands
 
-## 其他
-<a href="https://github.com/esrrhs/majiang_algorithm">麻将算法</a>
-<a href="https://github.com/esrrhs/teenpatti_algorithm">印度炸金花算法</a>
+// Win probability estimate (requires loadProbility())
+float  getHandProbability(String hand, String pub)  // 1v1 win probability estimate
+```
+
+---
+
+## How to Run the Bundled Test
+
+1. Extract `texas_algorithm.rar` into the project root directory.
+2. Run `TestUtil.main()`.
+
+---
+
+## How to Regenerate the Data Tables
+
+1. Extract `texas_algorithm.rar` into the project root.
+2. Run `TexasAlgorithmUtil.main()` with JVM flag `-Xmx8000m` (requires ~8 GB heap).
+3. Generation takes approximately **10 hours** on an 8-core machine.
+
+---
+
+## Algorithm Details
+
+### Lookup Table Algorithm
+
+The lookup table answers "given N cards (5–7), what is the best possible 5-card hand and its absolute rank?"
+
+#### Step 1 — Enumerate All Combinations
+
+All C(54, 7) combinations from a 52-card deck plus 2 Jokers are enumerated (~100 million combinations). Each 7-card hand is encoded into a `long` key. The same process is repeated for 6-card and 5-card hands.
+
+#### Step 2 — Multi-threaded Sort
+
+The ~100 million entries are sorted by hand strength using multi-threaded quicksort. On an 8-core machine this takes ~10 hours. If the lookup table itself is used as the comparator instead of the brute-force evaluator, this can be reduced to ~2 hours.
+
+#### Step 3 — Output Raw File
+
+The sorted array is written to `texas_data.txt` (~12 GB), recording the encoding key, rank order, best-5-card value, hand type, and human-readable card string for each entry.
+
+#### Step 4 — Suit Normalization (Color Removal)
+
+100 million entries cannot fit in practical memory. The key insight is that suit information is redundant for non-flush hands:
+
+- **Flush hands** (Flush, Straight Flush, Royal Flush): at least 5 cards share a suit. The suit distribution is normalized to `♦♦♦♦♦♣♠`, reducing the keyspace dramatically.
+- **Non-flush hands**: suits are irrelevant; all suits are collapsed to `♦`.
+
+This produces two compact files (`texas_data_color.txt` and `texas_data_normal.txt`) with a combined size of ~18 MB, loading to tens of MB in memory.
+
+#### Step 5 — Query
+
+Given 7 cards:
+1. Look up the normalized flush key in the color table.
+2. Look up the suit-stripped key in the normal table.
+3. If both match, return the entry with the higher rank.
+
+---
+
+### Win Probability Estimation Algorithm
+
+Given 2 hole cards and 0–4 community cards, this estimates 1v1 win probability without exhaustively enumerating all remaining card combinations.
+
+#### Step 1 — Probability Table Generation
+
+Using the 7-card rank table from above, for every N-card combination (2 ≤ N ≤ 6), the average win probability is computed by iterating over all 7-card supersets containing those N cards. This produces 5 output files (~2 GB total before compression).
+
+#### Step 2 — Suit Normalization
+
+The same suit-normalization trick is applied, reducing the 5 files to ~300 MB (two tables each: original and suit-stripped). Runtime memory usage is ~200 MB.
+
+#### Step 3 — Query Logic
+
+Given hole cards `H` and community cards `C`:
+
+1. **P1** — Look up the community cards alone in the probability table.  
+   This gives the average win probability for any hand using those community cards, plus `P1_max` and `P1_min`.
+
+2. **P2** — Look up the combined hole + community cards.  
+   This approximates the average win probability for the player's specific hand. (Minor inaccuracy: hole cards are counted twice.)
+
+3. **Interpolation** — Using the relationship between `P2`, `P1`, `P1_max`, and `P1_min`, the final win probability is estimated by linear interpolation, assuming a uniform distribution of opponent hands.
+
+#### Accuracy
+
+| Scenario | True probability | Typical estimate | Error |
+|----------|-----------------|------------------|-------|
+| General | 0.50 | 0.60 | ≤ 0.10 |
+
+Exhaustive calculation (fixing hole + community, enumerating all remaining cards and opponents) would take 20+ days for 2 hole + 4 community cards and exceeds practical data size limits. The estimation approach achieves acceptable accuracy within those constraints.
+
+---
+
+## Related Projects
+
+- [majiang_algorithm](https://github.com/esrrhs/majiang_algorithm) — Mahjong algorithm
+- [teenpatti_algorithm](https://github.com/esrrhs/teenpatti_algorithm) — Teen Patti (Indian poker) algorithm
