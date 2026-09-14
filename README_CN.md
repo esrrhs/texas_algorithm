@@ -15,7 +15,7 @@
 <dependency>
     <groupId>com.github.esrrhs</groupId>
     <artifactId>texas_algorithm</artifactId>
-    <version>1.0.13</version>
+    <version>1.0.14</version>
 </dependency>
 ```
 
@@ -121,8 +121,14 @@ float p = TexasAlgorithmUtil.getHandProbability("方3,鬼", "黑2,黑4,黑5,黑K
 
 ```java
 // 加载 / 初始化
-void load()                                   // 加载查表数据到内存
-void loadProbility()                          // 加载胜率数据到内存
+void load()                                   // 加载查表数据到内存（默认当前目录）
+void load(String dirPath)                     // 从指定目录加载查表数据
+void load(File dir)                           // 从指定目录加载查表数据
+void loadProbility()                          // 加载胜率数据到内存（默认当前目录）
+void loadProbility(String dirPath)            // 从指定目录加载胜率数据
+void loadProbility(File dir)                  // 从指定目录加载胜率数据
+boolean isLoaded()                            // 查表数据是否已成功加载
+boolean isProbabilityLoaded()                 // 胜率数据是否已成功加载
 
 // 最优手牌
 String getMax(String hand, String pub, ...)   // 2 张手牌 + 3–5 张公牌中的最优 5 张
@@ -141,10 +147,16 @@ float  getHandProbability(String hand, String pub)  // 1v1 胜率估算
 
 ---
 
-## 运行内置测试
+## 运行单元测试
 
+```bash
+# 运行 JUnit 5 单元测试（支持 Java 8、11、17、21）
+mvn test
+```
+
+若需运行完整基准对照测试：
 1. 将 `texas_algorithm.rar` 解压到项目根目录。
-2. 运行 `TestUtil.main()`。
+2. 运行 `TestUtil.main()` 或直接执行 `mvn test`。
 
 ---
 

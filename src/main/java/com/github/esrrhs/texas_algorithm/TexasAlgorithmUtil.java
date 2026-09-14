@@ -75,8 +75,10 @@ public class TexasAlgorithmUtil
 
 	public static ConcurrentHashMap<Long, KeyData> colorMap = new ConcurrentHashMap<>();
 	public static ConcurrentHashMap<Long, KeyData> normalMap = new ConcurrentHashMap<>();
-	public static ConcurrentHashMap<Long, ProbilityData>[] probilityMap = new ConcurrentHashMap[7];
-	public static ConcurrentHashMap<Long, ProbilityData>[] optprobilityMap = new ConcurrentHashMap[7];
+	@SuppressWarnings("unchecked")
+	public static ConcurrentHashMap<Long, ProbilityData>[] probilityMap = (ConcurrentHashMap<Long, ProbilityData>[]) new ConcurrentHashMap[7];
+	@SuppressWarnings("unchecked")
+	public static ConcurrentHashMap<Long, ProbilityData>[] optprobilityMap = (ConcurrentHashMap<Long, ProbilityData>[]) new ConcurrentHashMap[7];
 
 	public static void main(String[] args)
 	{
@@ -200,29 +202,55 @@ public class TexasAlgorithmUtil
 		}
 	}
 
+	public static boolean isLoaded()
+	{
+		return !normalMap.isEmpty() && !colorMap.isEmpty();
+	}
+
+	public static boolean isProbabilityLoaded()
+	{
+		return probilityMap[2] != null && !probilityMap[2].isEmpty();
+	}
+
 	public static void load()
+	{
+		load(new File("."));
+	}
+
+	public static void load(String dirPath)
+	{
+		load(new File(dirPath));
+	}
+
+	public static void load(File dir)
 	{
 		try
 		{
 			long begin = System.currentTimeMillis();
-			FileInputStream inputStream = new FileInputStream("texas_data_color.txt");
-			loadColor(inputStream);
-			inputStream.close();
-			inputStream = new FileInputStream("texas_data_normal.txt");
-			loadNormal(inputStream);
-			inputStream.close();
-			inputStream = new FileInputStream("texas_data_extra_color_6.txt");
-			loadColor(inputStream);
-			inputStream.close();
-			inputStream = new FileInputStream("texas_data_extra_normal_6.txt");
-			loadNormal(inputStream);
-			inputStream.close();
-			inputStream = new FileInputStream("texas_data_extra_color_5.txt");
-			loadColor(inputStream);
-			inputStream.close();
-			inputStream = new FileInputStream("texas_data_extra_normal_5.txt");
-			loadNormal(inputStream);
-			inputStream.close();
+			try (FileInputStream inputStream = new FileInputStream(new File(dir, "texas_data_color.txt")))
+			{
+				loadColor(inputStream);
+			}
+			try (FileInputStream inputStream = new FileInputStream(new File(dir, "texas_data_normal.txt")))
+			{
+				loadNormal(inputStream);
+			}
+			try (FileInputStream inputStream = new FileInputStream(new File(dir, "texas_data_extra_color_6.txt")))
+			{
+				loadColor(inputStream);
+			}
+			try (FileInputStream inputStream = new FileInputStream(new File(dir, "texas_data_extra_normal_6.txt")))
+			{
+				loadNormal(inputStream);
+			}
+			try (FileInputStream inputStream = new FileInputStream(new File(dir, "texas_data_extra_color_5.txt")))
+			{
+				loadColor(inputStream);
+			}
+			try (FileInputStream inputStream = new FileInputStream(new File(dir, "texas_data_extra_normal_5.txt")))
+			{
+				loadNormal(inputStream);
+			}
 			System.out.println("load time " + (System.currentTimeMillis() - begin));
 		}
 		catch (Exception e)
@@ -233,14 +261,25 @@ public class TexasAlgorithmUtil
 
 	public static void loadProbility()
 	{
+		loadProbility(new File("."));
+	}
+
+	public static void loadProbility(String dirPath)
+	{
+		loadProbility(new File(dirPath));
+	}
+
+	public static void loadProbility(File dir)
+	{
 		try
 		{
 			long begin = System.currentTimeMillis();
 			for (int i = 6; i >= 2; i--)
 			{
-				FileInputStream inputStream2 = new FileInputStream("texas_data_opt_" + i + ".txt");
-				loadProbility(i, inputStream2);
-				inputStream2.close();
+				try (FileInputStream inputStream2 = new FileInputStream(new File(dir, "texas_data_opt_" + i + ".txt")))
+				{
+					loadProbility(i, inputStream2);
+				}
 			}
 			System.out.println("load time " + (System.currentTimeMillis() - begin));
 		}
@@ -817,6 +856,10 @@ public class TexasAlgorithmUtil
 		{
 			return null;
 		}
+		if (probilityMap[num] == null || optprobilityMap[num] == null)
+		{
+			return null;
+		}
 
 		ProbilityData probilityData = probilityMap[num].get(k);
 		if (probilityData == null)
@@ -834,21 +877,23 @@ public class TexasAlgorithmUtil
 
 	public static float getHandProbability(List<Byte> hand, List<Byte> pub)
 	{
-		hand.addAll(pub);
-		Collections.sort(hand);
-		Collections.sort(pub);
-		long pubkey = GenUtil.genCardBind(pub);
+		List<Byte> allCards = new ArrayList<>(hand);
+		allCards.addAll(pub);
+		Collections.sort(allCards);
+		List<Byte> pubCopy = new ArrayList<>(pub);
+		Collections.sort(pubCopy);
+		long pubkey = GenUtil.genCardBind(pubCopy);
 
 		ProbilityData pubProbilityData = getHandProbability(pubkey);
 
 		float avg = 0;
-		if (hand.size() == 7)
+		if (allCards.size() == 7)
 		{
-			avg = (float) getWinProbability(hand);
+			avg = (float) getWinProbability(allCards);
 		}
 		else
 		{
-			long totalkey = GenUtil.genCardBind(hand);
+			long totalkey = GenUtil.genCardBind(allCards);
 			ProbilityData totalProbilityData = getHandProbability(totalkey);
 			if (totalProbilityData == null)
 			{
