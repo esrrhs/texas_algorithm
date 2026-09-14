@@ -17,7 +17,7 @@ A high-performance Java library for Texas Hold'em poker with Joker (wild card) s
 <dependency>
     <groupId>com.github.esrrhs</groupId>
     <artifactId>texas_algorithm</artifactId>
-    <version>1.0.13</version>
+    <version>1.0.14</version>
 </dependency>
 ```
 
@@ -125,8 +125,14 @@ The `getWinType()` method returns one of these constants from `TexasCardUtil`:
 
 ```java
 // Load / unload
-void load()                                   // Load lookup tables into memory
-void loadProbility()                          // Load probability tables into memory
+void load()                                   // Load lookup tables into memory (current directory)
+void load(String dirPath)                     // Load lookup tables from specified directory
+void load(File dir)                           // Load lookup tables from specified directory
+void loadProbility()                          // Load probability tables into memory (current directory)
+void loadProbility(String dirPath)            // Load probability tables from specified directory
+void loadProbility(File dir)                  // Load probability tables from specified directory
+boolean isLoaded()                            // Check if lookup tables are loaded
+boolean isProbabilityLoaded()                 // Check if probability tables are loaded
 
 // Best hand
 String getMax(String hand, String pub, ...)   // Best 5 cards from 2 hole + 3–5 community
@@ -145,10 +151,16 @@ float  getHandProbability(String hand, String pub)  // 1v1 win probability estim
 
 ---
 
-## How to Run the Bundled Test
+## Running Unit Tests
 
+```bash
+# Run JUnit 5 tests (compatible with Java 8, 11, 17, 21)
+mvn test
+```
+
+To run the full benchmark and lookup verification:
 1. Extract `texas_algorithm.rar` into the project root directory.
-2. Run `TestUtil.main()`.
+2. Run `TestUtil.main()` or execute `mvn test`.
 
 ---
 
