@@ -1,5 +1,9 @@
 # Texas Hold'em Algorithm (with Joker Support)
 
+[![Maven Central](https://img.shields.io/maven-central/v/com.github.esrrhs/texas_algorithm)](https://central.sonatype.com/artifact/com.github.esrrhs/texas_algorithm)
+[![License](https://img.shields.io/github/license/esrrhs/texas_algorithm)](https://github.com/esrrhs/texas_algorithm)
+[![Build Status](https://github.com/esrrhs/texas_algorithm/actions/workflows/maven.yml/badge.svg?branch=master)](https://github.com/esrrhs/texas_algorithm/actions)
+
 [中文文档](README_CN.md)
 
 A high-performance Java library for Texas Hold'em poker with Joker (wild card) support. Supports up to **2 Jokers** and provides two independent subsystems:

@@ -1,5 +1,9 @@
 # 德州扑克算法（支持鬼牌）
 
+[![Maven Central](https://img.shields.io/maven-central/v/com.github.esrrhs/texas_algorithm)](https://central.sonatype.com/artifact/com.github.esrrhs/texas_algorithm)
+[![License](https://img.shields.io/github/license/esrrhs/texas_algorithm)](https://github.com/esrrhs/texas_algorithm)
+[![Build Status](https://github.com/esrrhs/texas_algorithm/actions/workflows/maven.yml/badge.svg?branch=master)](https://github.com/esrrhs/texas_algorithm/actions)
+
 高性能 Java 德州扑克算法库，支持最多 **2 张鬼牌**（Wild Card），提供两个独立子系统：
 
 | 子系统 | 内存占用 | 功能 |
