@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: java
     strategy:
       matrix:
         java: [ '8', '11', '17', '21' ]
@@ -25,4 +28,4 @@ jobs:
         cache: 'maven'
 
     - name: Build and Test with Maven
-      run: mvn -B test package --file pom.xml
+      run: mvn -B test package
