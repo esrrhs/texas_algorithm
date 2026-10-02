@@ -20,5 +20,8 @@ Thumbs.db
 
 # Extracted data files (tracked in texas_algorithm.rar)
 texas_data*.txt
-hand/
-hand4/
+hand*/
+
+# Go build output
+go/texas_algorithm
+go/texas_algorithm.exe

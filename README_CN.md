@@ -3,18 +3,30 @@
 [![License](https://img.shields.io/github/license/esrrhs/texas_algorithm)](https://github.com/esrrhs/texas_algorithm)
 [![Language](https://img.shields.io/github/languages/top/esrrhs/texas_algorithm)](https://github.com/esrrhs/texas_algorithm)
 [![Maven Central](https://img.shields.io/maven-central/v/com.github.esrrhs/texas_algorithm)](https://central.sonatype.com/artifact/com.github.esrrhs/texas_algorithm)
-[![Build Status](https://github.com/esrrhs/texas_algorithm/actions/workflows/maven.yml/badge.svg?branch=master)](https://github.com/esrrhs/texas_algorithm/actions)
+[![Java CI](https://github.com/esrrhs/texas_algorithm/actions/workflows/maven.yml/badge.svg?branch=master)](https://github.com/esrrhs/texas_algorithm/actions)
+[![Go CI](https://github.com/esrrhs/texas_algorithm/actions/workflows/go.yml/badge.svg?branch=master)](https://github.com/esrrhs/texas_algorithm/actions)
 
-高性能 Java 德州扑克算法库，支持最多 **2 张鬼牌**（Wild Card），提供两个独立子系统：
+高性能德州扑克算法库，支持最多 **2 张鬼牌**（Wild Card），提供 **Java** 与 **Go** 两套功能对齐的实现，包含两个独立子系统：
 
 | 子系统 | 内存占用 | 功能 |
 |--------|----------|------|
 | **查表算法** | 约几十 MB | 5–7 张牌的最大牌面评估、大小排序、牌型识别 |
 | **胜率评估** | 约 200 MB | 2 张手牌 + 0–4 张公牌的 1v1 胜率估算 |
 
+## 目录结构
+
+```
+java/    Java 实现（Maven，发布到 Maven Central）
+go/      Go 实现（与 Java 库功能对齐的移植版本）
+```
+
+两套实现共用同一份生成数据表（`texas_data*.txt`），输出结果完全一致；Go 版本已通过与 Java 版本的位级输出对照验证。
+
 ---
 
-## Maven 依赖
+## Java
+
+### Maven 依赖
 
 ```xml
 <dependency>
@@ -26,7 +38,7 @@
 
 ---
 
-## 快速上手
+### 快速上手
 
 ### 1. 加载数据表
 
@@ -69,6 +81,58 @@ int type = TexasAlgorithmUtil.getWinType("方4,方A,鬼,黑A,黑3,黑5,黑6");
 // 返回 [0, 1] 的浮点数
 float p = TexasAlgorithmUtil.getHandProbability("方3,鬼", "黑2,黑4,黑5,黑K");
 ```
+
+---
+
+## Go
+
+### 安装
+
+```bash
+go get github.com/esrrhs/texas_algorithm/go
+```
+
+### 快速上手
+
+```go
+package main
+
+import (
+	"fmt"
+
+	ta "github.com/esrrhs/texas_algorithm/go"
+)
+
+func main() {
+	// 加载查表数据（约几十 MB，手牌评估必须先调用）
+	ta.Load()
+
+	// 从 2 张手牌 + 5 张公牌中找出最大的 5 张牌
+	best, guiTrans := ta.GetMaxStrHandPub("黑2,黑3", "方2,方A,黑7,黑5,鬼")
+	fmt.Println(best)
+
+	// 获取 7 张牌的绝对排名（数值越大越强）
+	rank := ta.GetWinPositionStr("方4,方A,鬼,黑A,黑3,黑5,黑6")
+
+	// 直接比较两手 7 张牌：正数表示第一手赢
+	cmp := ta.CompareStr("方4,方A,鬼,黑A,黑3,黑5,黑6", "黑2,红3,方7,梅9,方K,黑Q,红J")
+
+	// 获取牌型常量（详见下方牌型表）
+	typ := ta.GetWinTypeStr("方4,方A,鬼,黑A,黑3,黑5,黑6")
+
+	// 加载胜率数据后，估算 1v1 胜率
+	ta.LoadProbility()
+	p := ta.GetHandProbabilityStr("方3,鬼", "黑2,黑4,黑5,黑K")
+
+	_ = guiTrans
+	_ = rank
+	_ = cmp
+	_ = typ
+	_ = p
+}
+```
+
+Go API 与 Java 一一对应：`Load`/`LoadDir` ↔ `load()`、`GetKeyData*` ↔ `getKeyData()`、`GetMax*` ↔ `getMax()`、`GetWin*` ↔ `getWin*()`、`Compare*` ↔ `compare()`、`GetHandProbability*` ↔ `getHandProbability()`。区别是 Go 用返回值带出鬼牌替换列表，而不是出参。
 
 ---
 
@@ -155,22 +219,26 @@ float  getHandProbability(String hand, String pub)  // 1v1 胜率估算
 ## 运行单元测试
 
 ```bash
-# 运行 JUnit 5 单元测试（支持 Java 8、11、17、21）
-mvn test
+# Java：JUnit 5 单元测试（支持 Java 8、11、17、21）
+cd java && mvn test
+
+# Go：与 Java 相同用例的测试套件
+cd go && go test ./...
 ```
 
+两套测试用例一一对应；依赖数据表的用例在数据文件缺失时自动跳过（CI 上没有数据文件，本地解压后可全量运行）。
+
 若需运行完整基准对照测试：
-1. 将 `texas_algorithm.rar` 解压到项目根目录。
-2. 运行 `TestUtil.main()` 或直接执行 `mvn test`。
+1. 将 `texas_algorithm.rar` 解压到工作目录（`java/` 或 `go/`）。
+2. 重新运行测试，或运行 `TestUtil.main()`（Java）/ `go run ./cmd/texas_algorithm demo`（Go）。
 
 ---
 
 ## 重新生成数据表
 
-1. 将 `texas_algorithm.rar` 解压到项目根目录。
-2. 添加 JVM 参数 `-Xmx8000m`（需要约 8 GB 堆内存）。
-3. 运行 `TexasAlgorithmUtil.main()`。
-4. 在 8 核机器上约需 **10 小时**完成。
+1. 将 `texas_algorithm.rar` 解压到工作目录。
+2. Java：添加 JVM 参数 `-Xmx8000m`（需要约 8 GB 堆内存）后运行 `TexasAlgorithmUtil.main()`；Go：在 `go/` 目录运行 `go run ./cmd/texas_algorithm`。
+3. 在 8 核机器上约需 **10 小时**完成。
 
 ---
 
