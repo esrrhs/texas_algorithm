@@ -5,8 +5,9 @@
 [![Maven Central](https://img.shields.io/maven-central/v/com.github.esrrhs/texas_algorithm)](https://central.sonatype.com/artifact/com.github.esrrhs/texas_algorithm)
 [![Java CI](https://github.com/esrrhs/texas_algorithm/actions/workflows/maven.yml/badge.svg?branch=master)](https://github.com/esrrhs/texas_algorithm/actions)
 [![Go CI](https://github.com/esrrhs/texas_algorithm/actions/workflows/go.yml/badge.svg?branch=master)](https://github.com/esrrhs/texas_algorithm/actions)
+[![C++ CI](https://github.com/esrrhs/texas_algorithm/actions/workflows/cpp.yml/badge.svg?branch=master)](https://github.com/esrrhs/texas_algorithm/actions)
 
-高性能德州扑克算法库，支持最多 **2 张鬼牌**（Wild Card），提供 **Java** 与 **Go** 两套功能对齐的实现，包含两个独立子系统：
+高性能德州扑克算法库，支持最多 **2 张鬼牌**（Wild Card），提供 **Java**、**Go** 与 **C++** 三套功能对齐的实现，包含两个独立子系统：
 
 | 子系统 | 内存占用 | 功能 |
 |--------|----------|------|
@@ -18,9 +19,10 @@
 ```
 java/    Java 实现（Maven，发布到 Maven Central）
 go/      Go 实现（与 Java 库功能对齐的移植版本）
+cpp/     C++ 实现（与 Java/Go 功能对齐，CMake 构建）
 ```
 
-两套实现共用同一份生成数据表（`texas_data*.txt`），输出结果完全一致；Go 版本已通过与 Java 版本的位级输出对照验证。
+三套实现共用同一份生成数据表（`texas_data*.txt`），输出结果完全一致；Go 与 C++ 版本均已通过与 Java 版本的位级输出对照验证。
 
 ---
 
@@ -136,6 +138,52 @@ Go API 与 Java 一一对应：`Load`/`LoadDir` ↔ `load()`、`GetKeyData*` ↔
 
 ---
 
+## C++
+
+### 构建
+
+```bash
+cd cpp
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
+```
+
+需要 C++17 编译器和 CMake 3.16+。
+
+### 快速上手
+
+```cpp
+#include "texas_algorithm_util.h"
+
+using namespace texas_algorithm;
+
+int main()
+{
+    // 加载查表数据（约几十 MB，手牌评估必须先调用）
+    Load();
+
+    // 从 2 张手牌 + 5 张公牌中找出最大的 5 张牌
+    auto [best, guiTrans] = GetMaxStrHandPub("黑2,黑3", "方2,方A,黑7,黑5,鬼");
+
+    // 获取 7 张牌的绝对排名（数值越大越强）
+    int rank = GetWinPositionStr("方4,方A,鬼,黑A,黑3,黑5,黑6");
+
+    // 直接比较两手 7 张牌：正数表示第一手赢
+    int cmp = CompareStr("方4,方A,鬼,黑A,黑3,黑5,黑6", "黑2,红3,方7,梅9,方K,黑Q,红J");
+
+    // 获取牌型常量（详见下方牌型表）
+    int type = GetWinTypeStr("方4,方A,鬼,黑A,黑3,黑5,黑6");
+
+    // 加载胜率数据后，估算 1v1 胜率
+    LoadProbility();
+    float p = GetHandProbabilityStr("方3,鬼", "黑2,黑4,黑5,黑K");
+}
+```
+
+链接 `texas_algorithm` 库目标即可。C++ API 与 Java/Go 命名一一对应：`Load`、`GetKeyData*`、`GetMax*`、`GetWin*`、`Compare*`、`GetHandProbability*`。鬼牌替换列表同样用返回值带出。
+
+---
+
 ## 牌面表示
 
 牌面用中文字符串表示，多张牌用英文逗号分隔。
@@ -224,20 +272,23 @@ cd java && mvn test
 
 # Go：与 Java 相同用例的测试套件
 cd go && go test ./...
+
+# C++：与 Java 相同用例的测试套件（CMake/ctest）
+cd cpp && cmake -S . -B build && cmake --build build && ctest --test-dir build --output-on-failure
 ```
 
-两套测试用例一一对应；依赖数据表的用例在数据文件缺失时自动跳过（CI 上没有数据文件，本地解压后可全量运行）。
+三套测试用例一一对应；依赖数据表的用例在数据文件缺失时自动跳过（CI 上没有数据文件，本地解压后可全量运行）。
 
 若需运行完整基准对照测试：
-1. 将 `texas_algorithm.rar` 解压到工作目录（`java/` 或 `go/`）。
-2. 重新运行测试，或运行 `TestUtil.main()`（Java）/ `go run ./cmd/texas_algorithm demo`（Go）。
+1. 将 `texas_algorithm.rar` 解压到工作目录（`java/`、`go/` 或 `cpp/`）。
+2. 重新运行测试，或运行 `TestUtil.main()`（Java）/ `go run ./cmd/texas_algorithm demo`（Go）/ `./build/texas_algorithm_demo demo`（C++）。
 
 ---
 
 ## 重新生成数据表
 
 1. 将 `texas_algorithm.rar` 解压到工作目录。
-2. Java：添加 JVM 参数 `-Xmx8000m`（需要约 8 GB 堆内存）后运行 `TexasAlgorithmUtil.main()`；Go：在 `go/` 目录运行 `go run ./cmd/texas_algorithm`。
+2. Java：添加 JVM 参数 `-Xmx8000m`（需要约 8 GB 堆内存）后运行 `TexasAlgorithmUtil.main()`；Go：在 `go/` 目录运行 `go run ./cmd/texas_algorithm`；C++：在 `cpp/` 目录运行 `./build/texas_algorithm_demo`。
 3. 在 8 核机器上约需 **10 小时**完成。
 
 ---

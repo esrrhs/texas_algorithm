@@ -25,3 +25,7 @@ hand*/
 # Go build output
 go/texas_algorithm
 go/texas_algorithm.exe
+
+# C++ build output
+cpp/build/
+cpp/texas_algorithm_demo
