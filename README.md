@@ -5,10 +5,11 @@
 [![Maven Central](https://img.shields.io/maven-central/v/com.github.esrrhs/texas_algorithm)](https://central.sonatype.com/artifact/com.github.esrrhs/texas_algorithm)
 [![Java CI](https://github.com/esrrhs/texas_algorithm/actions/workflows/maven.yml/badge.svg?branch=master)](https://github.com/esrrhs/texas_algorithm/actions)
 [![Go CI](https://github.com/esrrhs/texas_algorithm/actions/workflows/go.yml/badge.svg?branch=master)](https://github.com/esrrhs/texas_algorithm/actions)
+[![C++ CI](https://github.com/esrrhs/texas_algorithm/actions/workflows/cpp.yml/badge.svg?branch=master)](https://github.com/esrrhs/texas_algorithm/actions)
 
 [中文文档](README_CN.md)
 
-A high-performance poker algorithm library for Texas Hold'em with Joker (wild card) support, implemented in both **Java** and **Go** with feature-parity APIs. Supports up to **2 Jokers** and provides two independent subsystems:
+A high-performance poker algorithm library for Texas Hold'em with Joker (wild card) support, implemented in **Java**, **Go** and **C++** with feature-parity APIs. Supports up to **2 Jokers** and provides two independent subsystems:
 
 | Subsystem | Memory | Capability |
 |-----------|--------|------------|
@@ -20,9 +21,10 @@ A high-performance poker algorithm library for Texas Hold'em with Joker (wild ca
 ```
 java/    Java implementation (Maven, published to Maven Central)
 go/      Go implementation (feature-aligned port of the Java library)
+cpp/     C++ implementation (feature-aligned port, CMake build)
 ```
 
-Both implementations share the same generated data tables (`texas_data*.txt`) and produce identical results; the Go version is verified against the Java version with bit-level output comparison.
+All implementations share the same generated data tables (`texas_data*.txt`) and produce identical results; the Go and C++ versions are verified against the Java version with bit-level output comparison.
 
 ---
 
@@ -138,6 +140,52 @@ The Go API mirrors the Java one: `Load`/`LoadDir` ↔ `load()`, `GetKeyData*` �
 
 ---
 
+## C++
+
+### Build
+
+```bash
+cd cpp
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
+```
+
+Requires a C++17 compiler and CMake 3.16+.
+
+### Quick Start
+
+```cpp
+#include "texas_algorithm_util.h"
+
+using namespace texas_algorithm;
+
+int main()
+{
+    // Load lookup table (~tens of MB, required for hand evaluation)
+    Load();
+
+    // Get the best 5-card hand from 2 hole cards + 5 community cards
+    auto [best, guiTrans] = GetMaxStrHandPub("黑2,黑3", "方2,方A,黑7,黑5,鬼");
+
+    // Absolute rank of a 7-card hand (higher = stronger)
+    int rank = GetWinPositionStr("方4,方A,鬼,黑A,黑3,黑5,黑6");
+
+    // Compare two 7-card hands: positive if str1 wins
+    int cmp = CompareStr("方4,方A,鬼,黑A,黑3,黑5,黑6", "黑2,红3,方7,梅9,方K,黑Q,红J");
+
+    // Hand type constant (see Hand Types below)
+    int type = GetWinTypeStr("方4,方A,鬼,黑A,黑3,黑5,黑6");
+
+    // Load probability table (~200 MB), then estimate 1v1 win probability
+    LoadProbility();
+    float p = GetHandProbabilityStr("方3,鬼", "黑2,黑4,黑5,黑K");
+}
+```
+
+Link against the `texas_algorithm` library target. The C++ API mirrors the Java/Go one with the same naming: `Load`, `GetKeyData*`, `GetMax*`, `GetWin*`, `Compare*`, `GetHandProbability*`. Wild-card substitution lists are returned instead of passed as out-parameters.
+
+---
+
 ## Card Notation
 
 Cards are expressed as Chinese-character strings separated by commas.
@@ -226,20 +274,23 @@ cd java && mvn test
 
 # Go: mirror of the same test suite
 cd go && go test ./...
+
+# C++: mirror of the same test suite (CMake/ctest)
+cd cpp && cmake -S . -B build && cmake --build build && ctest --test-dir build --output-on-failure
 ```
 
-Both suites run the same cases; tests that need the generated data tables skip gracefully when the files are absent (CI has no data files, local runs may).
+All three suites run the same cases; tests that need the generated data tables skip gracefully when the files are absent (CI has no data files, local runs may).
 
 To run the full benchmark and lookup verification:
-1. Extract `texas_algorithm.rar` into the working directory (`java/` or `go/`).
-2. Run the tests again, or `TestUtil.main()` (Java) / `go run ./cmd/texas_algorithm demo` (Go).
+1. Extract `texas_algorithm.rar` into the working directory (`java/`, `go/` or `cpp/`).
+2. Run the tests again, or `TestUtil.main()` (Java) / `go run ./cmd/texas_algorithm demo` (Go) / `./build/texas_algorithm_demo demo` (C++).
 
 ---
 
 ## How to Regenerate the Data Tables
 
 1. Extract `texas_algorithm.rar` into the working directory.
-2. Java: run `TexasAlgorithmUtil.main()` with JVM flag `-Xmx8000m` (requires ~8 GB heap); Go: run `go run ./cmd/texas_algorithm` in `go/`.
+2. Java: run `TexasAlgorithmUtil.main()` with JVM flag `-Xmx8000m` (requires ~8 GB heap); Go: run `go run ./cmd/texas_algorithm` in `go/`; C++: run `./build/texas_algorithm_demo` in `cpp/`.
 3. Generation takes approximately **10 hours** on an 8-core machine.
 
 ---
