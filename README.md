@@ -217,7 +217,7 @@ Cards are expressed as Chinese-character strings separated by commas.
 
 ## Hand Types
 
-The `getWinType()` method returns one of these constants from `TexasCardUtil`:
+The `getWinType()` method returns one of these constants from `TexasCardUtil` (Go: `TexasCardType*` in the `go` package, C++: `TexasCardType*` in the `texas_algorithm` namespace — same values):
 
 | Constant | Value | Hand |
 |----------|-------|------|
@@ -236,7 +236,7 @@ The `getWinType()` method returns one of these constants from `TexasCardUtil`:
 
 ## API Reference
 
-### `TexasAlgorithmUtil`
+### `TexasAlgorithmUtil` (Java)
 
 ```java
 // Load / unload
@@ -263,6 +263,26 @@ int    compare(String str1, String str2)      // Compare two 7-card hands
 // Win probability estimate (requires loadProbility())
 float  getHandProbability(String hand, String pub)  // 1v1 win probability estimate
 ```
+
+### Go / C++ equivalents
+
+The Go package (`github.com/esrrhs/texas_algorithm/go`) and the C++ library (`cpp/`, namespace `texas_algorithm`) expose the same operations with aligned naming:
+
+| Java | Go / C++ |
+|------|----------|
+| `load()` / `load(dir)` | `Load()` / `LoadDir(dir)` |
+| `loadProbility()` / `loadProbility(dir)` | `LoadProbility()` / `LoadProbilityDir(dir)` |
+| `isLoaded()` / `isProbabilityLoaded()` | `IsLoaded()` / `IsProbabilityLoaded()` |
+| `getMax(hand, pub, ...)` | `GetMaxStrHandPub(hand, pub)` |
+| `getMax(pokes, ...)` | `GetMax(pokes)` |
+| `getWinPosition(cards)` | `GetWinPositionStr(cards)` / `GetWinPosition(pokes)` |
+| `getWinProbability(cards)` | `GetWinProbabilityStr(cards)` / `GetWinProbability(pokes)` |
+| `getWinType(cards)` | `GetWinTypeStr(cards)` / `GetWinType(pokes)` |
+| `getWinMax(cards)` | `GetWinMaxStr(cards)` / `GetWinMax(pokes)` |
+| `compare(str1, str2)` | `CompareStr(str1, str2)` / `CompareBytes(a, b)` / `CompareKey(k1, k2)` |
+| `getHandProbability(hand, pub)` | `GetHandProbabilityStr(hand, pub)` / `GetHandProbability(hand, pub)` |
+
+The only systematic difference: wild-card substitution lists are returned instead of being passed as out-parameters.
 
 ---
 
