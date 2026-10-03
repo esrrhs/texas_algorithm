@@ -215,7 +215,7 @@ int main()
 
 ## 牌型说明
 
-`getWinType()` 返回 `TexasCardUtil` 中的整型常量：
+`getWinType()` 返回 `TexasCardUtil` 中的整型常量（Go：`go` 包中的 `TexasCardType*`；C++：`texas_algorithm` 命名空间中的 `TexasCardType*`，取值相同）：
 
 | 常量 | 值 | 牌型 |
 |------|----|------|
@@ -234,7 +234,7 @@ int main()
 
 ## API 参考
 
-### `TexasAlgorithmUtil`
+### `TexasAlgorithmUtil`（Java）
 
 ```java
 // 加载 / 初始化
@@ -261,6 +261,26 @@ int    compare(String str1, String str2)      // 比较两手 7 张牌
 // 胜率估算（需先调用 loadProbility()）
 float  getHandProbability(String hand, String pub)  // 1v1 胜率估算
 ```
+
+### Go / C++ 对应接口
+
+Go 包（`github.com/esrrhs/texas_algorithm/go`）与 C++ 库（`cpp/`，`texas_algorithm` 命名空间）提供命名对齐的相同功能：
+
+| Java | Go / C++ |
+|------|----------|
+| `load()` / `load(dir)` | `Load()` / `LoadDir(dir)` |
+| `loadProbility()` / `loadProbility(dir)` | `LoadProbility()` / `LoadProbilityDir(dir)` |
+| `isLoaded()` / `isProbabilityLoaded()` | `IsLoaded()` / `IsProbabilityLoaded()` |
+| `getMax(hand, pub, ...)` | `GetMaxStrHandPub(hand, pub)` |
+| `getMax(pokes, ...)` | `GetMax(pokes)` |
+| `getWinPosition(cards)` | `GetWinPositionStr(cards)` / `GetWinPosition(pokes)` |
+| `getWinProbability(cards)` | `GetWinProbabilityStr(cards)` / `GetWinProbability(pokes)` |
+| `getWinType(cards)` | `GetWinTypeStr(cards)` / `GetWinType(pokes)` |
+| `getWinMax(cards)` | `GetWinMaxStr(cards)` / `GetWinMax(pokes)` |
+| `compare(str1, str2)` | `CompareStr(str1, str2)` / `CompareBytes(a, b)` / `CompareKey(k1, k2)` |
+| `getHandProbability(hand, pub)` | `GetHandProbabilityStr(hand, pub)` / `GetHandProbability(hand, pub)` |
+
+唯一的系统性差异：鬼牌替换列表通过返回值带出，而不是出参。
 
 ---
 
