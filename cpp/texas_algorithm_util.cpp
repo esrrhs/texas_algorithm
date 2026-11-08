@@ -1,11 +1,14 @@
 #include "texas_algorithm_util.h"
 
 #include <algorithm>
+#include <array>
 #include <ctime>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <thread>
 
 #include "gen_extra_opt_util.h"
 #include "gen_extra_util.h"
@@ -22,8 +25,7 @@ namespace texas_algorithm
   std::unordered_map<int64_t, KeyData> ColorMap;
   std::unordered_map<int64_t, KeyData> NormalMap;
 
-  std::unordered_map<int64_t, ProbilityData> ProbilityMap[7];
-  std::unordered_map<int64_t, ProbilityData> OptProbilityMap[7];
+
 
   namespace
   {
@@ -54,6 +56,14 @@ namespace texas_algorithm
     }
 
     int64_t ParseInt64(const std::string &s) { return std::strtoll(s.c_str(), nullptr, 10); }
+
+    // ThrowUnknownPoke rejects input that is not part of the standard 52-card
+    // deck. Before the joker was removed these paths returned a silent zero /
+    // nullptr / false; they now fail loudly.
+    [[noreturn]] void ThrowUnknownPoke(const std::string &detail)
+    {
+      throw std::invalid_argument("无法识别的牌: " + detail);
+    }
 
     // loadKeyFile parses one lookup table file into ColorMap (color=true) or
     // NormalMap (color=false).
@@ -88,47 +98,6 @@ namespace texas_algorithm
         else
         {
           NormalMap[key] = keyData;
-        }
-      }
-      return true;
-    }
-
-    // loadProbilityFile parses one probability table file into
-    // ProbilityMap[n] / OptProbilityMap[n]. Rows with type 0 go to the plain
-    // table, others to the optimized table.
-    bool LoadProbilityFile(int n, const std::string &path)
-    {
-      std::ifstream in(path, std::ios::binary);
-      if (!in.is_open())
-      {
-        std::cout << "cannot open " << path << std::endl;
-        return false;
-      }
-
-      ProbilityMap[n].clear();
-      OptProbilityMap[n].clear();
-
-      std::string line;
-      while (std::getline(in, line))
-      {
-        std::vector<std::string> params = SplitLine(line);
-        int64_t key = ParseInt64(params[0]);
-        int64_t type = ParseInt64(params[1]);
-        float probility = std::strtof(params[2].c_str(), nullptr);
-        float min = std::strtof(params[3].c_str(), nullptr);
-        float max = std::strtof(params[4].c_str(), nullptr);
-
-        ProbilityData data;
-        data.avg = probility;
-        data.min = min;
-        data.max = max;
-        if (type == 0)
-        {
-          ProbilityMap[n][key] = data;
-        }
-        else
-        {
-          OptProbilityMap[n][key] = data;
         }
       }
       return true;
@@ -233,7 +202,17 @@ namespace texas_algorithm
 
   bool IsLoaded() { return !NormalMap.empty() && !ColorMap.empty(); }
 
-  bool IsProbabilityLoaded() { return !ProbilityMap[2].empty(); }
+  bool IsProbabilityLoaded()
+  {
+    for (const auto &m : WinRateMap)
+    {
+      if (m.empty())
+      {
+        return false;
+      }
+    }
+    return true;
+  }
 
   void Load() { LoadDir("."); }
 
@@ -260,21 +239,84 @@ namespace texas_algorithm
 
   void LoadProbility() { LoadProbilityDir("."); }
 
+  // LoadProbilityDir loads the exact win-rate tables from dir. The three
+  // tables are independent: a missing texas_data_winrate_N.txt only makes the
+  // matching N-card lookup throw, everything else keeps working.
   void LoadProbilityDir(const std::string &dir)
   {
     int64_t begin = NowMillis();
 
-    for (int i = 6; i >= 2; i--)
+    int loaded = 0;
+    for (int i = 0; i <= 2; i++)
     {
-      std::string name = "texas_data_opt_" + std::to_string(i) + ".txt";
+      std::string name = "texas_data_winrate_" + std::to_string(i) + ".txt";
       std::string path = dir.empty() ? name : dir + "/" + name;
-      if (!LoadProbilityFile(i, path))
+      if (LoadWinRateFile(i, path))
       {
-        return;
+        loaded++;
       }
     }
 
-    std::cout << "load time " << NowMillis() - begin << std::endl;
+    std::cout << "load time " << NowMillis() - begin << " tables " << loaded << std::endl;
+  }
+
+  std::unordered_map<int64_t, WinRateData> WinRateMap[3];
+
+  bool LoadWinRateFile(int n, const std::string &path)
+  {
+    std::ifstream in(path, std::ios::binary);
+    if (!in.is_open())
+    {
+      std::cout << "open " << path << ": no such file or directory" << std::endl;
+      return false;
+    }
+    std::unordered_map<int64_t, WinRateData> m;
+    std::string line;
+    while (std::getline(in, line))
+    {
+      std::vector<std::string> params = SplitLine(line);
+      if (params.size() < 4)
+      {
+        continue;
+      }
+      WinRateData data;
+      int64_t key = ParseInt64(params[0]);
+      data.win = ParseInt64(params[1]);
+      data.tie = ParseInt64(params[2]);
+      data.total = ParseInt64(params[3]);
+      m[key] = data;
+    }
+    WinRateMap[n] = std::move(m);
+    return true;
+  }
+
+  bool IsWinRateLoaded() { return !WinRateMap[0].empty(); }
+
+  void CheckPoke(int poke)
+  {
+    if (!IsLegalCardByte(poke))
+    {
+      ThrowUnknownPoke("牌字节 " + std::to_string(poke));
+    }
+  }
+
+  void CheckPokes(const std::vector<int> &pokes)
+  {
+    for (int poke : pokes)
+    {
+      CheckPoke(poke);
+    }
+  }
+
+  void CheckKey(int64_t key)
+  {
+    for (int poke : KeyToPoke(key))
+    {
+      if (!IsLegalCardByte(poke))
+      {
+        ThrowUnknownPoke("牌 key " + std::to_string(key));
+      }
+    }
   }
 
   int StrToPokeValue(const std::string &str)
@@ -303,18 +345,18 @@ namespace texas_algorithm
     }
     catch (const std::exception &)
     {
-      throw std::invalid_argument("invalid poke value: " + str);
+      ThrowUnknownPoke("牌面 \"" + str + "\"");
     }
-    if (pos != str.size() || v < 0 || v > 127)
+    if (pos != str.size() || v < PokeValue2 || v > PokeValueA)
     {
-      throw std::invalid_argument("invalid poke value: " + str);
+      ThrowUnknownPoke("牌面 \"" + str + "\"");
     }
     return (int)v;
   }
 
   int StrToPoke(const std::string &str)
   {
-    // every suit marker (and 鬼) is a 3-byte UTF-8 character
+    // every suit marker is a 3-byte UTF-8 character
     if (str.size() >= 3)
     {
       std::string head = str.substr(0, 3);
@@ -335,12 +377,8 @@ namespace texas_algorithm
       {
         return PokeToByte(MakePoke(PokeColorHei, StrToPokeValue(rest)));
       }
-      if (head == "鬼")
-      {
-        return PokeToByte(GUI);
-      }
     }
-    return 0;
+    ThrowUnknownPoke("牌面 \"" + str + "\"");
   }
 
   std::string KeyToStr(int64_t key) { return ToString(key); }
@@ -408,14 +446,35 @@ namespace texas_algorithm
     std::vector<int> pokes = StrToPokes(str);
     if (pokes.size() != 7)
     {
-      return nullptr;
+      ThrowUnknownPoke("需要 7 张牌，实际 " + std::to_string(pokes.size()) + " 张");
     }
     return GetKeyData(pokes);
   }
 
-  const KeyData *GetKeyData(const std::vector<int> &pokes) { return GetKeyDataKey(GenCardBindBytes(pokes)); }
+  const KeyData *GetKeyData(const std::vector<int> &pokes)
+  {
+    CheckPokes(pokes);
+    int64_t key = GenCardBindBytes(pokes);
+    const KeyData *data = LookupKeyData(key);
+    if (data == nullptr)
+    {
+      ThrowUnknownPoke("未找到 key " + std::to_string(key) + " 的牌力数据");
+    }
+    return data;
+  }
 
   const KeyData *GetKeyDataKey(int64_t key)
+  {
+    CheckKey(key);
+    const KeyData *data = LookupKeyData(key);
+    if (data == nullptr)
+    {
+      ThrowUnknownPoke("未找到 key " + std::to_string(key) + " 的牌力数据");
+    }
+    return data;
+  }
+
+  const KeyData *LookupKeyData(int64_t key)
   {
     int64_t colorKey = ChangeColor(key);
     auto colorIt = ColorMap.find(colorKey);
@@ -438,49 +497,47 @@ namespace texas_algorithm
     return normal;
   }
 
-  std::pair<std::string, std::vector<int>> GetMaxStr(const std::string &str)
+  std::string GetMaxStr(const std::string &str) { return PokesToStr(GetMax(StrToPokes(str))); }
+
+  std::string GetMaxStrHandPub(const std::string &hand, const std::string &pub)
   {
-    std::pair<std::vector<int>, std::vector<int>> res = GetMax(StrToPokes(str));
-    return {PokesToStr(res.first), res.second};
+    return PokesToStr(GetMaxHandPub(StrToPokes(hand), StrToPokes(pub)));
   }
 
-  std::pair<std::string, std::vector<int>> GetMaxStrHandPub(const std::string &hand, const std::string &pub)
-  {
-    std::pair<std::vector<int>, std::vector<int>> res = GetMaxHandPub(StrToPokes(hand), StrToPokes(pub));
-    return {PokesToStr(res.first), res.second};
-  }
-
-  std::pair<std::vector<int>, std::vector<int>> GetMax(const std::vector<int> &pokes)
+  std::vector<int> GetMax(const std::vector<int> &pokes)
   {
     if (pokes.size() < 5 || pokes.size() > 7)
     {
-      return {{}, {}};
+      ThrowUnknownPoke("需要 5-7 张牌，实际 " + std::to_string(pokes.size()) + " 张");
     }
+    CheckPokes(pokes);
     std::vector<int> hand(pokes.begin(), pokes.begin() + 2);
     std::vector<int> pub(pokes.begin() + 2, pokes.end());
     return GetMaxHandPub(hand, pub);
   }
 
-  std::pair<std::vector<int>, std::vector<int>> GetMaxHandPub(const std::vector<int> &hand,
-                                                              const std::vector<int> &pub)
+  std::vector<int> GetMaxHandPub(const std::vector<int> &hand, const std::vector<int> &pub)
   {
-    std::vector<int> ret;
     if (hand.size() != 2)
     {
-      return {ret, {}};
+      ThrowUnknownPoke("手牌需要 2 张，实际 " + std::to_string(hand.size()) + " 张");
     }
     if (pub.size() < 3 || pub.size() > 5)
     {
-      return {ret, {}};
+      ThrowUnknownPoke("公牌需要 3-5 张，实际 " + std::to_string(pub.size()) + " 张");
     }
+    CheckPokes(hand);
+    CheckPokes(pub);
+
+    std::vector<int> ret;
     std::vector<int> tmp;
     tmp.reserve(hand.size() + pub.size());
     tmp.insert(tmp.end(), hand.begin(), hand.end());
     tmp.insert(tmp.end(), pub.begin(), pub.end());
-    const KeyData *keyData = GetKeyData(tmp);
+    const KeyData *keyData = LookupKeyData(GenCardBindBytes(tmp));
     if (keyData == nullptr)
     {
-      return {ret, {}};
+      ThrowUnknownPoke("未找到这手牌的牌力数据");
     }
 
     std::vector<int> max = KeyToPoke(keyData->max);
@@ -494,10 +551,7 @@ namespace texas_algorithm
       int srccolor[4] = {0, 0, 0, 0};
       for (int c : tmp)
       {
-        if (!IsGuiByte(c))
-        {
-          srccolor[c >> 4]++;
-        }
+        srccolor[c >> 4]++;
       }
 
       int srcmaxColor = 0;
@@ -558,7 +612,7 @@ namespace texas_algorithm
       {
         for (size_t i = 0; i < max.size(); i++)
         {
-          if (pubtmp[j] == max[i] && max[i] != 0 && pubtmp[j] != 0 && !IsGuiByte(pubtmp[j]))
+          if (pubtmp[j] == max[i] && max[i] != 0 && pubtmp[j] != 0)
           {
             ret.push_back(pubtmp[j]);
 
@@ -573,7 +627,7 @@ namespace texas_algorithm
       {
         for (size_t i = 0; i < max.size(); i++)
         {
-          if (handtmp[j] == max[i] && max[i] != 0 && handtmp[j] != 0 && !IsGuiByte(handtmp[j]))
+          if (handtmp[j] == max[i] && max[i] != 0 && handtmp[j] != 0)
           {
             ret.push_back(handtmp[j]);
 
@@ -588,7 +642,7 @@ namespace texas_algorithm
       {
         for (size_t j = 0; j < pubtmp.size(); j++)
         {
-          if (pubtmp[j] % 16 == max[i] % 16 && max[i] != 0 && pubtmp[j] != 0 && !IsGuiByte(pubtmp[j]))
+          if (pubtmp[j] % 16 == max[i] % 16 && max[i] != 0 && pubtmp[j] != 0)
           {
             ret.push_back(pubtmp[j]);
 
@@ -605,7 +659,7 @@ namespace texas_algorithm
         {
           for (size_t j = 0; j < handtmp.size(); j++)
           {
-            if (handtmp[j] % 16 == max[i] % 16 && max[i] != 0 && handtmp[j] != 0 && !IsGuiByte(handtmp[j]))
+            if (handtmp[j] % 16 == max[i] % 16 && max[i] != 0 && handtmp[j] != 0)
             {
               ret.push_back(handtmp[j]);
 
@@ -618,44 +672,18 @@ namespace texas_algorithm
       }
     }
 
-    while (ret.size() < 5)
-    {
-      ret.push_back(PokeToByte(GUI));
-    }
-
-    std::vector<int> guiTrans;
-    for (int m : max)
-    {
-      if (m != 0)
-      {
-        guiTrans.push_back(m);
-      }
-    }
-
     std::sort(ret.begin(), ret.end());
 
-    return {ret, guiTrans};
+    return ret;
   }
 
-  int GetWinPosition(const std::vector<int> &pokes)
-  {
-    const KeyData *keyData = GetKeyData(pokes);
-    if (keyData == nullptr)
-    {
-      return 0;
-    }
-    return keyData->postion;
-  }
+  int GetWinPosition(const std::vector<int> &pokes) { return GetKeyData(pokes)->postion; }
 
   int GetWinPositionStr(const std::string &str) { return GetWinPosition(StrToPokes(str)); }
 
   double GetWinProbability(const std::vector<int> &pokes)
   {
     const KeyData *keyData = GetKeyData(pokes);
-    if (keyData == nullptr)
-    {
-      return 0;
-    }
     int64_t total = 1;
     for (size_t i = 0; i < pokes.size(); i++)
     {
@@ -670,34 +698,18 @@ namespace texas_algorithm
 
   double GetWinProbabilityStr(const std::string &str) { return GetWinProbability(StrToPokes(str)); }
 
-  int64_t GetWinMax(const std::vector<int> &pokes)
-  {
-    const KeyData *keyData = GetKeyData(pokes);
-    if (keyData == nullptr)
-    {
-      return 0;
-    }
-    return keyData->max;
-  }
+  int64_t GetWinMax(const std::vector<int> &pokes) { return GetKeyData(pokes)->max; }
 
   int64_t GetWinMaxStr(const std::string &str) { return GetWinMax(StrToPokes(str)); }
 
-  int GetWinType(const std::vector<int> &pokes)
-  {
-    const KeyData *keyData = GetKeyData(pokes);
-    if (keyData == nullptr)
-    {
-      return 0;
-    }
-    return keyData->type;
-  }
+  int GetWinType(const std::vector<int> &pokes) { return GetKeyData(pokes)->type; }
 
   int GetWinTypeStr(const std::string &str) { return GetWinType(StrToPokes(str)); }
 
-  int CompareKey(int64_t k1, int64_t k2)
+  int CompareKeyLookup(int64_t k1, int64_t k2)
   {
-    const KeyData *keyData1 = GetKeyDataKey(k1);
-    const KeyData *keyData2 = GetKeyDataKey(k2);
+    const KeyData *keyData1 = LookupKeyData(k1);
+    const KeyData *keyData2 = LookupKeyData(k2);
     if (keyData1 == nullptr && keyData2 == nullptr)
     {
       return 0;
@@ -713,9 +725,18 @@ namespace texas_algorithm
     return keyData1->postion - keyData2->postion;
   }
 
+  int CompareKey(int64_t k1, int64_t k2)
+  {
+    CheckKey(k1);
+    CheckKey(k2);
+    return CompareKeyLookup(k1, k2);
+  }
+
   int CompareBytes(const std::vector<int> &bytes1, const std::vector<int> &bytes2)
   {
-    return CompareKey(GenCardBindBytes(bytes1), GenCardBindBytes(bytes2));
+    CheckPokes(bytes1);
+    CheckPokes(bytes2);
+    return CompareKeyLookup(GenCardBindBytes(bytes1), GenCardBindBytes(bytes2));
   }
 
   int CompareStr(const std::string &str1, const std::string &str2)
@@ -723,108 +744,317 @@ namespace texas_algorithm
     return CompareBytes(StrToPokes(str1), StrToPokes(str2));
   }
 
-  const ProbilityData *GetHandProbabilityKey(int64_t k)
-  {
-    int num = 0;
-    if (k > 10000000000LL)
-    {
-      num = 6;
-    }
-    else if (k > 100000000LL)
-    {
-      num = 5;
-    }
-    else if (k > 1000000LL)
-    {
-      num = 4;
-    }
-    else if (k > 10000LL)
-    {
-      num = 3;
-    }
-    else if (k > 100LL)
-    {
-      num = 2;
-    }
-    if (num < 2 || num > 6)
-    {
-      return nullptr;
-    }
-    if (ProbilityMap[num].empty() && OptProbilityMap[num].empty())
-    {
-      return nullptr;
-    }
-
-    auto it = ProbilityMap[num].find(k);
-    if (it != ProbilityMap[num].end())
-    {
-      return &it->second;
-    }
-    k = RemoveColor(k);
-    auto optIt = OptProbilityMap[num].find(k);
-    return optIt == OptProbilityMap[num].end() ? nullptr : &optIt->second;
-  }
-
   float GetHandProbabilityKeyPub(int64_t hand, int64_t pub)
   {
+    CheckKey(hand);
+    CheckKey(pub);
     return GetHandProbability(KeyToPoke(hand), KeyToPoke(pub));
+  }
+
+  int64_t CanonKey(const std::vector<int> &cards, int nHole)
+  {
+    int mask[4] = {0, 0, 0, 0};
+    int hole[4] = {0, 0, 0, 0};
+    for (int i = 0; i < (int)cards.size() && i < 5; i++)
+    {
+      int c = cards[i];
+      mask[c >> 4] |= 1 << (c & 0x0f);
+      if (i < nHole)
+      {
+        hole[c >> 4] |= 1 << (c & 0x0f);
+      }
+    }
+    int8_t label[4] = {0, 0, 0, 0};
+    bool used[4] = {false, false, false, false};
+    for (int8_t k = 0; k < 4; k++)
+    {
+      int best = -1;
+      int bestSig = 0;
+      for (int s = 0; s < 4; s++)
+      {
+        if (used[s])
+        {
+          continue;
+        }
+        int sig = (mask[s] << 16) | hole[s];
+        if (best < 0 || sig < bestSig)
+        {
+          best = s;
+          bestSig = sig;
+        }
+      }
+      used[best] = true;
+      label[best] = k;
+    }
+
+    uint8_t holeCards[5] = {0};
+    uint8_t pubCards[5] = {0};
+    int nh = 0, np = 0;
+    for (int i = 0; i < (int)cards.size() && i < 5; i++)
+    {
+      int c = cards[i];
+      uint8_t b = (uint8_t)((label[c >> 4] << 4) | (c & 0x0f));
+      if (i < nHole)
+      {
+        holeCards[nh++] = b;
+      }
+      else
+      {
+        pubCards[np++] = b;
+      }
+    }
+    std::sort(holeCards, holeCards + nh);
+    std::sort(pubCards, pubCards + np);
+
+    int64_t k = 0;
+    for (int i = 0; i < nh; i++)
+    {
+      k = k * 100 + (int64_t)holeCards[i];
+    }
+    for (int i = 0; i < np; i++)
+    {
+      k = k * 100 + (int64_t)pubCards[i];
+    }
+    return k;
+  }
+
+  namespace
+  {
+    // key7Board merges two ascending cards x<y into the ascending 5-card board
+    // and returns the 7-card key.
+    int64_t Key7Board(const uint8_t *b, uint8_t x, uint8_t y)
+    {
+      uint8_t buf[7];
+      int i = 0, j = 0;
+      while (j < 5)
+      {
+        if (i == 0 && x < b[j])
+        {
+          buf[i + j] = x;
+          i++;
+          continue;
+        }
+        if (i == 1 && y < b[j])
+        {
+          buf[i + j] = y;
+          i++;
+          continue;
+        }
+        buf[i + j] = b[j];
+        j++;
+      }
+      if (i == 0)
+      {
+        buf[5] = x;
+        buf[6] = y;
+      }
+      else if (i == 1)
+      {
+        buf[6] = y;
+      }
+      int64_t k = 0;
+      for (int n = 0; n < 7; n++)
+      {
+        k = k * 100 + (int64_t)buf[n];
+      }
+      return k;
+    }
+
+    struct EquityCount
+    {
+      int64_t win = 0;
+      int64_t tie = 0;
+      int64_t loss = 0;
+    };
+
+    void CountBoards(const std::vector<std::array<uint8_t, 5>> &boards, int from, int to,
+                     const std::vector<uint8_t> &rest, uint8_t hx, uint8_t hy, EquityCount &out)
+    {
+      for (int idx = from; idx < to; idx++)
+      {
+        const std::array<uint8_t, 5> &b = boards[idx];
+        uint8_t opp[45];
+        int n = 0;
+        for (uint8_t c : rest)
+        {
+          if (c == b[0] || c == b[1] || c == b[2] || c == b[3] || c == b[4])
+          {
+            continue;
+          }
+          opp[n] = c;
+          n++;
+        }
+        const KeyData *hero = LookupKeyData(Key7Board(b.data(), hx, hy));
+        if (hero == nullptr)
+        {
+          continue;
+        }
+        for (int i = 0; i < n; i++)
+        {
+          for (int j = i + 1; j < n; j++)
+          {
+            const KeyData *data = LookupKeyData(Key7Board(b.data(), opp[i], opp[j]));
+            if (data == nullptr)
+            {
+              continue;
+            }
+            if (hero->index > data->index)
+            {
+              out.win++;
+            }
+            else if (hero->index == data->index)
+            {
+              out.tie++;
+            }
+            else
+            {
+              out.loss++;
+            }
+          }
+        }
+      }
+    }
+  } // namespace
+
+  void EquityExact(const std::vector<int> &hand, const std::vector<int> &pub,
+                   int64_t &win, int64_t &tie, int64_t &loss)
+  {
+    win = tie = loss = 0;
+    std::vector<uint8_t> known;
+    for (int c : hand)
+    {
+      known.push_back((uint8_t)c);
+    }
+    for (int c : pub)
+    {
+      known.push_back((uint8_t)c);
+    }
+    std::vector<uint8_t> rest;
+    for (int color = 0; color < 4; color++)
+    {
+      for (int v = PokeValue2; v <= PokeValueA; v++)
+      {
+        uint8_t c = (uint8_t)((color << 4) | v);
+        bool used = false;
+        for (uint8_t u : known)
+        {
+          if (u == c)
+          {
+            used = true;
+            break;
+          }
+        }
+        if (!used)
+        {
+          rest.push_back(c);
+        }
+      }
+    }
+
+    int need = 5 - (int)pub.size();
+    std::array<uint8_t, 5> board = {0, 0, 0, 0, 0};
+    for (int i = 0; i < (int)pub.size(); i++)
+    {
+      board[i] = (uint8_t)pub[i];
+    }
+    std::vector<std::array<uint8_t, 5>> boards;
+    std::function<void(int, int)> gen = [&](int start, int depth)
+    {
+      if (depth == need)
+      {
+        std::array<uint8_t, 5> b = board;
+        std::sort(b.begin(), b.end());
+        boards.push_back(b);
+        return;
+      }
+      for (int i = start; i <= (int)rest.size() - (need - depth); i++)
+      {
+        board[pub.size() + depth] = rest[i];
+        gen(i + 1, depth + 1);
+      }
+    };
+    gen(0, 0);
+
+    uint8_t hx = (uint8_t)hand[0], hy = (uint8_t)hand[1];
+    if (hx > hy)
+    {
+      std::swap(hx, hy);
+    }
+
+    int workers = 1;
+    // 20k evaluations is roughly where the thread hand-off pays off: N>=4
+    // (45,540 pairs) benefits, N=5 (990) does not.
+    if ((int64_t)boards.size() * 990 >= 20000)
+    {
+      workers = (int)std::thread::hardware_concurrency();
+      if (workers < 1)
+      {
+        workers = 1;
+      }
+    }
+    std::vector<EquityCount> results(workers);
+    int chunk = (int)((boards.size() + workers - 1) / workers);
+    std::vector<std::thread> threads;
+    for (int w = 0; w < workers; w++)
+    {
+      int from = w * chunk;
+      int to = from + chunk;
+      if (to > (int)boards.size())
+      {
+        to = (int)boards.size();
+      }
+      if (from >= to)
+      {
+        continue;
+      }
+      threads.emplace_back(CountBoards, std::cref(boards), from, to, std::cref(rest), hx, hy,
+                           std::ref(results[w]));
+    }
+    for (std::thread &t : threads)
+    {
+      t.join();
+    }
+    for (const EquityCount &r : results)
+    {
+      win += r.win;
+      tie += r.tie;
+      loss += r.loss;
+    }
   }
 
   float GetHandProbability(const std::vector<int> &hand, const std::vector<int> &pub)
   {
-    std::vector<int> allCards;
-    allCards.reserve(hand.size() + pub.size());
-    allCards.insert(allCards.end(), hand.begin(), hand.end());
-    allCards.insert(allCards.end(), pub.begin(), pub.end());
-    std::sort(allCards.begin(), allCards.end());
-    std::vector<int> pubCopy(pub.begin(), pub.end());
-    std::sort(pubCopy.begin(), pubCopy.end());
-    int64_t pubkey = GenCardBindBytes(pubCopy);
-
-    const ProbilityData *pubProbilityData = GetHandProbabilityKey(pubkey);
-
-    float avg = 0;
-    if (allCards.size() == 7)
+    CheckPokes(hand);
+    CheckPokes(pub);
+    if (hand.size() != 2 || pub.size() > 5)
     {
-      avg = (float)GetWinProbability(allCards);
+      throw std::invalid_argument("无法识别的牌: 手牌必须为 2 张，公牌最多 5 张");
     }
-    else
+    if (pub.size() >= 3)
     {
-      int64_t totalkey = GenCardBindBytes(allCards);
-      const ProbilityData *totalProbilityData = GetHandProbabilityKey(totalkey);
-      if (totalProbilityData == nullptr)
+      int64_t win = 0, tie = 0, loss = 0;
+      EquityExact(hand, pub, win, tie, loss);
+      int64_t total = win + tie + loss;
+      if (total == 0)
       {
-        return 0;
+        throw std::invalid_argument("缺少胜率表数据");
       }
-      avg = totalProbilityData->avg;
+      return (float)((double)(2 * win + tie) / (double)(2 * total));
     }
-
-    if (pubProbilityData == nullptr)
+    const auto &m = WinRateMap[pub.size()];
+    if (m.empty())
     {
-      return avg;
+      throw std::invalid_argument("缺少胜率表数据");
     }
-
-    float p = 0.5f;
-
-    if (avg > pubProbilityData->avg)
+    std::vector<int> cards;
+    cards.insert(cards.end(), hand.begin(), hand.end());
+    cards.insert(cards.end(), pub.begin(), pub.end());
+    auto it = m.find(CanonKey(cards, 2));
+    if (it == m.end() || it->second.total == 0)
     {
-      p += 0.5f * (avg - pubProbilityData->avg) / (pubProbilityData->max - pubProbilityData->avg);
+      throw std::invalid_argument("缺少胜率表数据");
     }
-    else
-    {
-      p += 0.5f * (avg - pubProbilityData->avg) / (pubProbilityData->avg - pubProbilityData->min);
-    }
-
-    if (p > 1)
-    {
-      p = 1;
-    }
-    if (p < 0)
-    {
-      p = 0;
-    }
-
-    return p;
+    return (float)((double)(2 * it->second.win + it->second.tie) / (double)(2 * it->second.total));
   }
 
   float GetHandProbabilityStr(const std::string &hand, const std::string &pub)

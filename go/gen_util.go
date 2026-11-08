@@ -9,13 +9,10 @@ import (
 	"time"
 )
 
-// Number of wild cards in the deck, aligned with Java's GenUtil.guiNum.
-const GuiNum = 2
+// GenNum is the total number of cards in the deck (52 cards, no jokers).
+const GenNum = 52
 
-// GenNum is the total number of cards in the deck (52 + 2 jokers).
-const GenNum = 52 + GuiNum
-
-// Total is the number of 7-card combinations: C(54, 7).
+// Total is the number of 7-card combinations: C(52, 7).
 var Total int64 = (GenNum * (GenNum - 1) * (GenNum - 2) * (GenNum - 3) * (GenNum - 4) * (GenNum - 5) * (GenNum - 6)) /
 	(7 * 6 * 5 * 4 * 3 * 2)
 
@@ -38,7 +35,7 @@ var (
 	BeginPrint atomic.Int64
 )
 
-// GenAllPokes returns all 54 cards (52 regular cards + 2 jokers).
+// GenAllPokes returns all 52 cards.
 func GenAllPokes() []Poke {
 	list := []Poke{}
 	for _, t := range genAllCards() {
@@ -47,12 +44,12 @@ func GenAllPokes() []Poke {
 	return list
 }
 
-// GenAllCards returns all 54 cards as encoded bytes, sorted ascending.
+// GenAllCards returns all 52 cards as encoded bytes, sorted ascending.
 func GenAllCards() []int {
 	return genAllCards()
 }
 
-// AllCards is the full 54-card deck as encoded bytes, sorted ascending,
+// AllCards is the full 52-card deck as encoded bytes, sorted ascending,
 // mirroring Java's GenUtil.allCards.
 var AllCards = genAllCards()
 
@@ -63,14 +60,11 @@ func genAllCards() []int {
 			list = append(list, int(NewPoke(i, j+2).ToByte()))
 		}
 	}
-	for i := 0; i < GuiNum; i++ {
-		list = append(list, int(GUI.ToByte()))
-	}
 	sort.Ints(list)
 	return list
 }
 
-// GenKey enumerates all C(54, 7) combinations into Keys.
+// GenKey enumerates all C(52, 7) combinations into Keys.
 func GenKey() {
 	GenBeginPrint = time.Now().UnixMilli()
 
@@ -219,11 +213,11 @@ func pickBest(cs []Poke) []Poke {
 	var pickedCards []Poke
 	switch len(cs) {
 	case 7:
-		pickedCards = FiveFromSeven(cs)
+		pickedCards = FiveFromSevenWithoutGui(cs)
 	case 6:
-		pickedCards = FiveFromSix(cs)
+		pickedCards = FiveFromSixWithoutGui(cs)
 	case 5:
-		pickedCards = FiveFromFive(cs)
+		pickedCards = FiveFromFiveWithoutGui(cs)
 	}
 	return pickedCards
 }
@@ -291,7 +285,7 @@ func ToString(k int64) string {
 // tables are loaded, the lookup table is used as the comparator.
 func GenCompare(k1, k2 int64) bool {
 	if UseOpt {
-		return CompareKey(k1, k2) < 0
+		return compareKey(k1, k2) < 0
 	}
 
 	pickedCards1 := pickBest(ToArray(k1))

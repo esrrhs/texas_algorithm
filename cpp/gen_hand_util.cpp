@@ -104,7 +104,7 @@ namespace texas_algorithm
         other.push_back(i);
       }
 
-      int ret = CompareBytes(my, other);
+      int ret = CompareKeyLookup(GenCardBindBytes(my), GenCardBindBytes(other));
       if (ret == 0)
       {
         data.tie++;

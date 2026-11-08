@@ -19,26 +19,14 @@ namespace
 
   void Compare(const std::string &file);
 
-  // demo mirrors Java's TestUtil.main.
+  // demo mirrors Java's TestUtil.main. The 52-card deck has no joker card, so
+  // every API throws for input it cannot recognise.
   void Demo()
   {
     Load();
 
-    std::pair<std::string, std::vector<int>> res = GetMaxStr("方2,梅3,黑2,黑4,鬼");
-    std::cout << res.first << std::endl;
-    std::cout << PokesToStr(res.second) << std::endl;
-
-    res = GetMaxStr("方2,方3,方4,鬼,鬼,黑6,红6");
-    std::cout << res.first << std::endl;
-    std::cout << PokesToStr(res.second) << std::endl;
-
-    res = GetMaxStr("黑A,方J,黑8,红8,鬼");
-    std::cout << res.first << std::endl;
-    std::cout << PokesToStr(res.second) << std::endl;
-
-    res = GetMaxStr("方2,鬼,黑2,黑4,黑5,鬼");
-    std::cout << res.first << std::endl;
-    std::cout << PokesToStr(res.second) << std::endl;
+    std::cout << GetMaxStr("方2,梅3,黑2,黑4,黑5") << std::endl;
+    std::cout << GetMaxStr("方2,方3,方4,方5,黑6,红6,黑7") << std::endl;
 
     std::string cards = "方4,方A,黑2,黑A,黑3,黑5,黑6";
     std::string cards1 = "红8,方A,方2,黑8,黑3,黑5,黑7";
@@ -66,11 +54,11 @@ namespace
     std::cout << KeyToStr(GetWinMaxStr(cards3)) << std::endl;
     std::cout << GetWinTypeStr(cards3) << std::endl;
 
-    std::cout << GetMaxStrHandPub("方4,方2", "黑2,黑A,方3,黑5,黑6").first << std::endl;
-    std::cout << GetMaxStrHandPub("方4,方2", "黑2,黑A,黑7,黑5,黑6").first << std::endl;
-    std::cout << GetMaxStrHandPub("黑2,黑3", "方2,方A,黑7,黑5,黑6").first << std::endl;
-    std::cout << GetMaxStrHandPub("黑2,黑3", "方2,方A,黑7,黑5").first << std::endl;
-    std::cout << GetMaxStrHandPub("黑2,黑3", "方2,黑7,黑5").first << std::endl;
+    std::cout << GetMaxStrHandPub("方4,方2", "黑2,黑A,方3,黑5,黑6") << std::endl;
+    std::cout << GetMaxStrHandPub("方4,方2", "黑2,黑A,黑7,黑5,黑6") << std::endl;
+    std::cout << GetMaxStrHandPub("黑2,黑3", "方2,方A,黑7,黑5,黑6") << std::endl;
+    std::cout << GetMaxStrHandPub("黑2,黑3", "方2,方A,黑7,黑5") << std::endl;
+    std::cout << GetMaxStrHandPub("黑2,黑3", "方2,黑7,黑5") << std::endl;
 
     LoadProbility();
     std::cout << GetHandProbabilityStr("方3,方A", "黑2,黑4,黑5,黑K") << std::endl;

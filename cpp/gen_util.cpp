@@ -80,10 +80,6 @@ namespace texas_algorithm
         list.push_back(PokeToByte(MakePoke(i, j + 2)));
       }
     }
-    for (int i = 0; i < GuiNum; i++)
-    {
-      list.push_back(PokeToByte(GUI));
-    }
     std::sort(list.begin(), list.end());
     return list;
   }
@@ -241,15 +237,15 @@ namespace texas_algorithm
       std::vector<Poke> pickedCards;
       if (cs.size() == 7)
       {
-        pickedCards = FiveFromSeven(cs);
+        pickedCards = FiveFromSevenWithoutGui(cs);
       }
       else if (cs.size() == 6)
       {
-        pickedCards = FiveFromSix(cs);
+        pickedCards = FiveFromSixWithoutGui(cs);
       }
       else if (cs.size() == 5)
       {
-        pickedCards = FiveFromFive(cs);
+        pickedCards = FiveFromFiveWithoutGui(cs);
       }
       return pickedCards;
     }
@@ -326,7 +322,7 @@ namespace texas_algorithm
   {
     if (UseOpt)
     {
-      return CompareKey(k1, k2) < 0;
+      return CompareKeyLookup(k1, k2) < 0;
     }
 
     std::vector<Poke> pickedCards1 = PickBest(ToArray(k1));

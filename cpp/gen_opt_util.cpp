@@ -228,7 +228,9 @@ namespace texas_algorithm
 
     for (int &c : cs)
     {
-      if (!IsGuiByte(c))
+      // Guard against bytes outside the 52-card deck: without it an illegal
+      // byte such as 88 (color 5) would index past the end of color[].
+      if (IsLegalCardByte(c))
       {
         c = (PokeColorFang << 4) | (c % 16);
       }
@@ -246,7 +248,9 @@ namespace texas_algorithm
     int color[4] = {0, 0, 0, 0};
     for (int i : cs)
     {
-      if (!IsGuiByte(i))
+      // Guard against bytes outside the 52-card deck so color[i >> 4] stays
+      // in range (the removed joker byte 88 has color 5).
+      if (IsLegalCardByte(i))
       {
         color[i >> 4]++;
       }
@@ -265,7 +269,7 @@ namespace texas_algorithm
 
     for (int &c : cs)
     {
-      if (!IsGuiByte(c))
+      if (IsLegalCardByte(c))
       {
         if ((c >> 4) == maxColor)
         {

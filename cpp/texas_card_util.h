@@ -27,20 +27,11 @@ namespace texas_algorithm
   // place and returns their type, mirroring Java's getCardTypeUnorderedWithoutGui.
   int GetCardTypeUnorderedWithoutGui(std::vector<Poke> &cards);
 
-  // FiveFromSeven picks the best 5 cards out of 7, handling wild cards.
-  std::vector<Poke> FiveFromSeven(std::vector<Poke> cards);
-
   // FiveFromSevenWithoutGui picks the best 5 cards out of 7 without wild cards.
   std::vector<Poke> FiveFromSevenWithoutGui(std::vector<Poke> cards);
 
-  // FiveFromSix picks the best 5 cards out of 6, handling wild cards.
-  std::vector<Poke> FiveFromSix(std::vector<Poke> cards);
-
   // FiveFromSixWithoutGui picks the best 5 cards out of 6 without wild cards.
   std::vector<Poke> FiveFromSixWithoutGui(std::vector<Poke> cards);
-
-  // FiveFromFive evaluates 5 cards, using wild cards if present.
-  std::vector<Poke> FiveFromFive(std::vector<Poke> cards);
 
   // FiveFromFiveWithoutGui sorts the 5 cards by value descending.
   std::vector<Poke> FiveFromFiveWithoutGui(std::vector<Poke> cards);

@@ -26,69 +26,71 @@ func main() {
 	fmt.Println("done!")
 }
 
-// demo mirrors Java's TestUtil.main.
+// demo mirrors Java's TestUtil.main. The 52-card deck has no joker card, so
+// every API returns an error for input it cannot recognise.
 func demo() {
 	ta.Load()
 
-	best, gui := ta.GetMaxStr("方2,梅3,黑2,黑4,鬼")
-	fmt.Println(best)
-	fmt.Println(ta.PokesToStr(gui))
+	best, err := ta.GetMaxStr("方2,梅3,黑2,黑4,黑5")
+	fmt.Println(best, err)
 
-	best, gui = ta.GetMaxStr("方2,方3,方4,鬼,鬼,黑6,红6")
-	fmt.Println(best)
-	fmt.Println(ta.PokesToStr(gui))
-
-	best, gui = ta.GetMaxStr("黑A,方J,黑8,红8,鬼")
-	fmt.Println(best)
-	fmt.Println(ta.PokesToStr(gui))
-
-	best, gui = ta.GetMaxStr("方2,鬼,黑2,黑4,黑5,鬼")
-	fmt.Println(best)
-	fmt.Println(ta.PokesToStr(gui))
+	best, err = ta.GetMaxStr("方2,方3,方4,方5,黑6,红6,黑7")
+	fmt.Println(best, err)
 
 	cards := "方4,方A,黑2,黑A,黑3,黑5,黑6"
 	cards1 := "红8,方A,方2,黑8,黑3,黑5,黑7"
-	fmt.Println(ta.GetWinPositionStr(cards))
-	fmt.Println(ta.GetWinProbabilityStr(cards))
-	fmt.Println(ta.KeyToStr(ta.GetWinMaxStr(cards)))
-	fmt.Println(ta.GetWinTypeStr(cards))
+	showHand(cards)
+	showHand(cards1)
 
-	fmt.Println(ta.GetWinPositionStr(cards1))
-	fmt.Println(ta.GetWinProbabilityStr(cards1))
-	fmt.Println(ta.KeyToStr(ta.GetWinMaxStr(cards1)))
-	fmt.Println(ta.GetWinTypeStr(cards1))
-
-	fmt.Println(ta.CompareStr(cards, cards1))
+	cmp, err := ta.CompareStr(cards, cards1)
+	fmt.Println(cmp, err)
 
 	cards2 := "红8,方A,方2,黑8,黑5,黑7"
-	fmt.Println(ta.GetWinPositionStr(cards2))
-	fmt.Println(ta.GetWinProbabilityStr(cards2))
-	fmt.Println(ta.KeyToStr(ta.GetWinMaxStr(cards2)))
-	fmt.Println(ta.GetWinTypeStr(cards2))
-
 	cards3 := "红8,方A,方2,黑5,黑7"
-	fmt.Println(ta.GetWinPositionStr(cards3))
-	fmt.Println(ta.GetWinProbabilityStr(cards3))
-	fmt.Println(ta.KeyToStr(ta.GetWinMaxStr(cards3)))
-	fmt.Println(ta.GetWinTypeStr(cards3))
+	showHand(cards2)
+	showHand(cards3)
 
-	best, _ = ta.GetMaxStrHandPub("方4,方2", "黑2,黑A,方3,黑5,黑6")
-	fmt.Println(best)
-	best, _ = ta.GetMaxStrHandPub("方4,方2", "黑2,黑A,黑7,黑5,黑6")
-	fmt.Println(best)
-	best, _ = ta.GetMaxStrHandPub("黑2,黑3", "方2,方A,黑7,黑5,黑6")
-	fmt.Println(best)
-	best, _ = ta.GetMaxStrHandPub("黑2,黑3", "方2,方A,黑7,黑5")
-	fmt.Println(best)
-	best, _ = ta.GetMaxStrHandPub("黑2,黑3", "方2,黑7,黑5")
-	fmt.Println(best)
+	for _, pub := range []string{
+		"黑2,黑A,方3,黑5,黑6",
+		"黑2,黑A,黑7,黑5,黑6",
+		"方2,方A,黑7,黑5,黑6",
+		"方2,方A,黑7,黑5",
+		"方2,黑7,黑5",
+	} {
+		best, err := ta.GetMaxStrHandPub("黑2,黑3", pub)
+		fmt.Println(best, err)
+	}
 
 	ta.LoadProbility()
-	fmt.Println(ta.GetHandProbabilityStr("方3,方A", "黑2,黑4,黑5,黑K"))
-	fmt.Println(ta.GetHandProbabilityStr("方2,方3", ""))
-	fmt.Println(ta.GetHandProbabilityStr("方3,方A", "黑2,黑4,黑5,黑K,方A"))
+	p, err := ta.GetHandProbabilityStr("方3,方A", "黑2,黑4,黑5,黑K")
+	fmt.Println(p, err)
+	p, err = ta.GetHandProbabilityStr("方2,方3", "")
+	fmt.Println(p, err)
+	p, err = ta.GetHandProbabilityStr("方3,方A", "黑2,黑4,黑5,黑K,方A")
+	fmt.Println(p, err)
+
+	// The removed joker card is no longer accepted anywhere.
+	_, err = ta.GetMaxStr("方2,梅3,黑2,黑4,鬼")
+	fmt.Println(err)
+	_, err = ta.GetWinPosition([]byte{0x22, 0x13, 0x54, 0x58, 0x35, 0x36, 0x37})
+	fmt.Println(err)
 
 	compare("hand4/texas_hand_方3方10.txt")
+}
+
+func showHand(cards string) {
+	pos, err := ta.GetWinPositionStr(cards)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	prob, _ := ta.GetWinProbabilityStr(cards)
+	max, _ := ta.GetWinMaxStr(cards)
+	typ, _ := ta.GetWinTypeStr(cards)
+	fmt.Println(pos)
+	fmt.Println(prob)
+	fmt.Println(ta.KeyToStr(max))
+	fmt.Println(typ)
 }
 
 // compare checks the stored exhaustive win rates against the estimated ones,
@@ -120,7 +122,11 @@ func compare(file string) {
 		}
 		card := params[2]
 
-		p := ta.GetHandProbabilityKeyPub(key/100000000, key%100000000)
+		p, err := ta.GetHandProbabilityKeyPub(key/100000000, key%100000000)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 
 		if float64(p)-probility > 0.1 || probility-float64(p) > 0.1 {
 			fmt.Println("diff " + strconv.FormatFloat(float64(p)-probility, 'g', -1, 64) + " " + card + " " +

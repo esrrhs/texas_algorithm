@@ -1,6 +1,7 @@
 package texas_algorithm
 
 import (
+	"errors"
 	"os"
 	"testing"
 )
@@ -20,7 +21,7 @@ func TestMain(m *testing.M) {
 		dataAvailable = IsLoaded()
 	}
 
-	if fileExists("texas_data_opt_2.txt") {
+	if fileExists("texas_data_winrate_0.txt") {
 		LoadProbility()
 		probDataAvailable = IsProbabilityLoaded()
 	}
@@ -29,7 +30,10 @@ func TestMain(m *testing.M) {
 }
 
 func TestPokeParsing(t *testing.T) {
-	b := StrToPoke("方A")
+	b, err := StrToPoke("方A")
+	if err != nil {
+		t.Fatalf("StrToPoke(方A) error: %v", err)
+	}
 	p := NewPokeFromByte(b)
 	if p.Color != PokeColorFang {
 		t.Errorf("color = %d, want %d", p.Color, PokeColorFang)
@@ -41,21 +45,77 @@ func TestPokeParsing(t *testing.T) {
 		t.Errorf("String() = %q, want %q", p.String(), "方A")
 	}
 
-	guiByte := StrToPoke("鬼")
-	gui := NewPokeFromByte(guiByte)
-	if !gui.IsGui() {
-		t.Errorf("鬼 should be a wild card")
+	pokes, err := StrToPokes("方2,梅3,黑2,黑4,黑5")
+	if err != nil {
+		t.Fatalf("StrToPokes error: %v", err)
 	}
-	if gui.ToByte() != GUI.ToByte() {
-		t.Errorf("gui byte = %d, want %d", gui.ToByte(), GUI.ToByte())
-	}
-
-	pokes := StrToPokes("方2,梅3,黑2,黑4,鬼")
 	if len(pokes) != 5 {
 		t.Fatalf("len = %d, want 5", len(pokes))
 	}
-	if got := PokesToStr(pokes); got != "方2梅3黑2黑4鬼" {
-		t.Errorf("PokesToStr = %q, want %q", got, "方2梅3黑2黑4鬼")
+	if got := PokesToStr(pokes); got != "方2梅3黑2黑4黑5" {
+		t.Errorf("PokesToStr = %q, want %q", got, "方2梅3黑2黑4黑5")
+	}
+}
+
+// TestJokerRejected pins the new contract: the joker card was removed from the
+// deck, so every entry point must report ErrUnknownPoke instead of silently
+// returning a zero value or nil.
+func TestJokerRejected(t *testing.T) {
+	if _, err := StrToPoke("鬼"); !errors.Is(err, ErrUnknownPoke) {
+		t.Errorf("StrToPoke(鬼) err = %v, want ErrUnknownPoke", err)
+	}
+	if _, err := StrToPokes("方2,梅3,黑2,黑4,鬼"); !errors.Is(err, ErrUnknownPoke) {
+		t.Errorf("StrToPokes with 5 cards and 鬼 err = %v, want ErrUnknownPoke", err)
+	}
+	if _, err := StrToPokes("方2,梅3,黑2,黑4,黑5,鬼"); !errors.Is(err, ErrUnknownPoke) {
+		t.Errorf("StrToPokes with 6 cards and 鬼 err = %v, want ErrUnknownPoke", err)
+	}
+	if _, err := StrToPokes("方2,梅3,黑2,黑4,黑5,黑6,鬼"); !errors.Is(err, ErrUnknownPoke) {
+		t.Errorf("StrToPokes with 7 cards and 鬼 err = %v, want ErrUnknownPoke", err)
+	}
+	if _, err := GetMaxStr("方2,梅3,黑2,黑4,鬼"); !errors.Is(err, ErrUnknownPoke) {
+		t.Errorf("GetMaxStr with 鬼 err = %v, want ErrUnknownPoke", err)
+	}
+	if _, err := GetWinPositionStr("方2,梅3,黑2,黑4,鬼"); !errors.Is(err, ErrUnknownPoke) {
+		t.Errorf("GetWinPositionStr with 鬼 err = %v, want ErrUnknownPoke", err)
+	}
+	if _, err := GetWinTypeStr("方2,梅3,黑2,黑4,鬼"); !errors.Is(err, ErrUnknownPoke) {
+		t.Errorf("GetWinTypeStr with 鬼 err = %v, want ErrUnknownPoke", err)
+	}
+	if _, err := CompareStr("方2,梅3,黑2,黑4,鬼", "方2,梅3,黑2,黑4,黑5"); !errors.Is(err, ErrUnknownPoke) {
+		t.Errorf("CompareStr with 鬼 err = %v, want ErrUnknownPoke", err)
+	}
+
+	// The joker byte 0x58 = 88 belongs to color 5, which the 52-card deck does
+	// not have; both byte-slice and key entry points must reject it.
+	jokerBytes := []byte{0x12, 0x13, 0x24, 0x25, 0x36, 0x37, 0x58}
+	if err := CheckPokes(jokerBytes); !errors.Is(err, ErrUnknownPoke) {
+		t.Errorf("CheckPokes(88) err = %v, want ErrUnknownPoke", err)
+	}
+	if _, err := GetMax(jokerBytes); !errors.Is(err, ErrUnknownPoke) {
+		t.Errorf("GetMax with byte 88 err = %v, want ErrUnknownPoke", err)
+	}
+	if _, err := GetWinPosition(jokerBytes); !errors.Is(err, ErrUnknownPoke) {
+		t.Errorf("GetWinPosition with byte 88 err = %v, want ErrUnknownPoke", err)
+	}
+	if _, err := GetMaxHandPub([]byte{0x12, 0x58}, []byte{0x13, 0x24, 0x25, 0x36}); !errors.Is(err, ErrUnknownPoke) {
+		t.Errorf("GetMaxHandPub with joker in hand err = %v, want ErrUnknownPoke", err)
+	}
+	if _, err := CompareBytes(jokerBytes, []byte{0x12, 0x13, 0x24, 0x25, 0x36, 0x37, 0x48}); !errors.Is(err, ErrUnknownPoke) {
+		t.Errorf("CompareBytes with byte 88 err = %v, want ErrUnknownPoke", err)
+	}
+
+	// A hand key containing a joker card, e.g. 方2 梅3 黑2 黑4 黑5 黑6 鬼,
+	// is rejected by the key based entry points too.
+	jokerKey := GenCardBindBytes(jokerBytes)
+	if err := CheckKey(jokerKey); !errors.Is(err, ErrUnknownPoke) {
+		t.Errorf("CheckKey(%d) err = %v, want ErrUnknownPoke", jokerKey, err)
+	}
+	if _, err := GetKeyDataKey(jokerKey); !errors.Is(err, ErrUnknownPoke) {
+		t.Errorf("GetKeyDataKey(%d) err = %v, want ErrUnknownPoke", jokerKey, err)
+	}
+	if _, err := CompareKey(jokerKey, GenCardBindBytes([]byte{0x12, 0x13, 0x24, 0x25, 0x36, 0x37, 0x48})); !errors.Is(err, ErrUnknownPoke) {
+		t.Errorf("CompareKey with joker key err = %v, want ErrUnknownPoke", err)
 	}
 }
 
@@ -92,25 +152,11 @@ func TestCardTypes(t *testing.T) {
 	checkCardType(t, "黑A,红K,黑Q,红J,黑9", TexasCardTypeGaoPai)
 }
 
-func TestWildCardEvaluation(t *testing.T) {
-	// 4 cards + 1 Gui -> Royal Flush
-	checkCardTypeWithGui(t, "黑10,黑J,黑Q,黑K,鬼", TexasCardTypeKingTongHuaShun)
-
-	// 3 cards + 2 Gui -> Straight Flush
-	checkCardTypeWithGui(t, "方2,方3,方4,鬼,鬼", TexasCardTypeTongHuaShun)
-
-	// Three of a kind + 1 Gui -> Four of a kind
-	checkCardTypeWithGui(t, "黑A,红A,梅A,黑K,鬼", TexasCardTypeSiTiao)
-
-	// One pair + 1 Gui -> Three of a kind
-	checkCardTypeWithGui(t, "黑A,红A,黑K,红Q,鬼", TexasCardTypeSanTiao)
-}
-
 func TestCardComparison(t *testing.T) {
-	royalFlush := toSortedPokeList("黑10,黑J,黑Q,黑K,黑A")
-	straightFlush := toSortedPokeList("红9,红10,红J,红Q,红K")
-	fourOfAKind := toSortedPokeList("黑A,红A,梅A,方A,黑K")
-	fullHouse := toSortedPokeList("黑A,红A,梅A,黑K,红K")
+	royalFlush := toSortedPokeList(t, "黑10,黑J,黑Q,黑K,黑A")
+	straightFlush := toSortedPokeList(t, "红9,红10,红J,红Q,红K")
+	fourOfAKind := toSortedPokeList(t, "黑A,红A,梅A,方A,黑K")
+	fullHouse := toSortedPokeList(t, "黑A,红A,梅A,黑K,红K")
 
 	if CompareCardsWithoutGui(royalFlush, straightFlush) <= 0 {
 		t.Errorf("royal flush should beat straight flush")
@@ -128,29 +174,24 @@ func TestCardComparison(t *testing.T) {
 
 func checkCardType(t *testing.T, cardsStr string, expectedType int) {
 	t.Helper()
-	pokes := toPokeList(cardsStr)
+	pokes := toPokeList(t, cardsStr)
 	actualType := GetCardTypeUnorderedWithoutGui(pokes)
 	if actualType != expectedType {
 		t.Errorf("Failed for cards: %s, got type %d, want %d", cardsStr, actualType, expectedType)
 	}
 }
 
-func checkCardTypeWithGui(t *testing.T, cardsStr string, expectedType int) {
+func toPokeList(t *testing.T, cardsStr string) []Poke {
 	t.Helper()
-	pokes := toPokeList(cardsStr)
-	picked := FiveFromFive(pokes)
-	actualType := GetCardTypeUnorderedWithoutGui(picked)
-	if actualType != expectedType {
-		t.Errorf("Failed with gui for cards: %s, got type %d, want %d", cardsStr, actualType, expectedType)
+	bytes, err := StrToPokes(cardsStr)
+	if err != nil {
+		t.Fatalf("StrToPokes(%q) error: %v", cardsStr, err)
 	}
-}
-
-func toPokeList(cardsStr string) []Poke {
-	bytes := StrToPokes(cardsStr)
 	return ToArray(GenCardBindBytes(bytes))
 }
 
-func toSortedPokeList(cardsStr string) []Poke {
-	list := toPokeList(cardsStr)
+func toSortedPokeList(t *testing.T, cardsStr string) []Poke {
+	t.Helper()
+	list := toPokeList(t, cardsStr)
 	return FiveFromFiveWithoutGui(list)
 }

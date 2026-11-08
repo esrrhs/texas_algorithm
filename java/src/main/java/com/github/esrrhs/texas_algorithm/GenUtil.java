@@ -13,8 +13,7 @@ public class GenUtil
 	public static FileOutputStream out;
 	public static int lastPrint = 0;
 	public static long beginPrint;
-	public static final int guiNum = 2;
-	public static final long genNum = 52 + (long) guiNum;
+	public static final long genNum = 52;
 	public static final long total = (genNum * (genNum - 1) * (genNum - 2) * (genNum - 3) * (genNum - 4) * (genNum - 5)
 			* (genNum - 6)) / (7 * 6 * 5 * 4 * 3 * 2);
 	public static ArrayList<Long> keys = new ArrayList<>();
@@ -58,10 +57,6 @@ public class GenUtil
 			{
 				list.add((Integer) (int) (new Poke(i, (byte) (j + 2))).toByte());
 			}
-		}
-		for (int i = 0; i < guiNum; i++)
-		{
-			list.add((Integer) (int) Poke.GUI.toByte());
 		}
 		Collections.sort(list);
 		return list;
@@ -254,15 +249,15 @@ public class GenUtil
 		ArrayList<Poke> pickedCards1 = new ArrayList<>();
 		if (cs.size() == 7)
 		{
-			TexasCardUtil.fiveFromSeven(cs, pickedCards1);
+			TexasCardUtil.fiveFromSevenWithoutGui(cs, pickedCards1);
 		}
 		else if (cs.size() == 6)
 		{
-			TexasCardUtil.fiveFromSix(cs, pickedCards1);
+			TexasCardUtil.fiveFromSixWithoutGui(cs, pickedCards1);
 		}
 		else if (cs.size() == 5)
 		{
-			TexasCardUtil.fiveFromFive(cs, pickedCards1);
+			TexasCardUtil.fiveFromFiveWithoutGui(cs, pickedCards1);
 		}
 
 		long ret = 0;
@@ -279,15 +274,15 @@ public class GenUtil
 		ArrayList<Poke> pickedCards1 = new ArrayList<>();
 		if (cs.size() == 7)
 		{
-			TexasCardUtil.fiveFromSeven(cs, pickedCards1);
+			TexasCardUtil.fiveFromSevenWithoutGui(cs, pickedCards1);
 		}
 		else if (cs.size() == 6)
 		{
-			TexasCardUtil.fiveFromSix(cs, pickedCards1);
+			TexasCardUtil.fiveFromSixWithoutGui(cs, pickedCards1);
 		}
 		else if (cs.size() == 5)
 		{
-			TexasCardUtil.fiveFromFive(cs, pickedCards1);
+			TexasCardUtil.fiveFromFiveWithoutGui(cs, pickedCards1);
 		}
 
 		return TexasCardUtil.getCardTypeUnorderedWithoutGui(pickedCards1);
@@ -350,30 +345,30 @@ public class GenUtil
 			ArrayList<Poke> pickedCards1 = new ArrayList<>();
 			if (cs1.size() == 7)
 			{
-				TexasCardUtil.fiveFromSeven(cs1, pickedCards1);
+				TexasCardUtil.fiveFromSevenWithoutGui(cs1, pickedCards1);
 			}
 			else if (cs1.size() == 6)
 			{
-				TexasCardUtil.fiveFromSix(cs1, pickedCards1);
+				TexasCardUtil.fiveFromSixWithoutGui(cs1, pickedCards1);
 			}
 			else if (cs1.size() == 5)
 			{
-				TexasCardUtil.fiveFromFive(cs1, pickedCards1);
+				TexasCardUtil.fiveFromFiveWithoutGui(cs1, pickedCards1);
 			}
 
 			ArrayList<Poke> cs2 = toArray(k2);
 			ArrayList<Poke> pickedCards2 = new ArrayList<>();
 			if (cs2.size() == 7)
 			{
-				TexasCardUtil.fiveFromSeven(cs2, pickedCards2);
+				TexasCardUtil.fiveFromSevenWithoutGui(cs2, pickedCards2);
 			}
 			else if (cs2.size() == 6)
 			{
-				TexasCardUtil.fiveFromSix(cs2, pickedCards2);
+				TexasCardUtil.fiveFromSixWithoutGui(cs2, pickedCards2);
 			}
 			else if (cs2.size() == 5)
 			{
-				TexasCardUtil.fiveFromFive(cs2, pickedCards2);
+				TexasCardUtil.fiveFromFiveWithoutGui(cs2, pickedCards2);
 			}
 
 			return TexasCardUtil.compareCardsWithoutGui(pickedCards1, pickedCards2) < 0;

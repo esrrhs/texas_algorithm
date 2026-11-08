@@ -10,7 +10,7 @@ namespace texas_algorithm
   // Set it before generating, mirroring Java's static GenTransUtil.N.
   extern int GenTransN;
 
-  // GenTransGenKey enumerates all C(54, GenTransN) combinations as the key set.
+  // GenTransGenKey enumerates all C(52, GenTransN) combinations as the key set.
   void GenTransGenKey();
 
   // GenTransTransData reads texas_data.txt and, for every N-card subset of each

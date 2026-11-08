@@ -32,14 +32,6 @@ namespace
     CheckEq(actualType, expectedType, "Failed for cards: " + cardsStr);
   }
 
-  void CheckCardTypeWithGui(const std::string &cardsStr, int expectedType)
-  {
-    std::vector<Poke> pokes = ToPokeList(cardsStr);
-    std::vector<Poke> picked = FiveFromFive(pokes);
-    int actualType = GetCardTypeUnorderedWithoutGui(picked);
-    CheckEq(actualType, expectedType, "Failed with gui for cards: " + cardsStr);
-  }
-
   void TestPokeParsing()
   {
     int b = StrToPoke("方A");
@@ -48,14 +40,75 @@ namespace
     CheckEq(p.value, PokeValueA, "value");
     CheckEqStr(PokeToString(p), "方A", "PokeToString");
 
-    int guiByte = StrToPoke("鬼");
-    Poke gui = PokeFromByte(guiByte);
-    Check(IsGui(gui), "IsGui(gui)");
-    CheckEq(PokeToByte(gui), PokeToByte(GUI), "gui byte");
-
-    std::vector<int> pokes = StrToPokes("方2,梅3,黑2,黑4,鬼");
+    std::vector<int> pokes = StrToPokes("方2,梅3,黑2,黑4,黑5");
     CheckEq((long long)pokes.size(), 5, "pokes size");
-    CheckEqStr(PokesToStr(pokes), "方2梅3黑2黑4鬼", "PokesToStr");
+    CheckEqStr(PokesToStr(pokes), "方2梅3黑2黑4黑5", "PokesToStr");
+  }
+
+  // TestJokerRejected pins the new contract: the joker card was removed from
+  // the deck, so every entry point must throw std::invalid_argument instead of
+  // silently returning a zero value, nullptr or false.
+  void TestJokerRejected()
+  {
+    CheckThrowsInvalidArgument([]()
+                               { StrToPoke("鬼"); },
+                               "牌面 \"鬼\"", "StrToPoke(鬼)");
+    CheckThrowsInvalidArgument([]()
+                               { StrToPokes("方2,梅3,黑2,黑4,鬼"); },
+                               "牌面 \"鬼\"", "StrToPokes with 5 cards and 鬼");
+    CheckThrowsInvalidArgument([]()
+                               { StrToPokes("方2,梅3,黑2,黑4,黑5,鬼"); },
+                               "牌面 \"鬼\"", "StrToPokes with 6 cards and 鬼");
+    CheckThrowsInvalidArgument([]()
+                               { StrToPokes("方2,梅3,黑2,黑4,黑5,黑6,鬼"); },
+                               "牌面 \"鬼\"", "StrToPokes with 7 cards and 鬼");
+    CheckThrowsInvalidArgument([]()
+                               { GetMaxStr("方2,梅3,黑2,黑4,鬼"); },
+                               "牌面 \"鬼\"", "GetMaxStr with 鬼");
+    CheckThrowsInvalidArgument([]()
+                               { GetMaxStrHandPub("方2,鬼", "黑2,黑4,黑5"); },
+                               "牌面 \"鬼\"", "GetMaxStrHandPub with 鬼");
+    CheckThrowsInvalidArgument([]()
+                               { GetWinPositionStr("方2,梅3,黑2,黑4,鬼"); },
+                               "牌面 \"鬼\"", "GetWinPositionStr with 鬼");
+    CheckThrowsInvalidArgument([]()
+                               { GetWinTypeStr("方2,梅3,黑2,黑4,鬼"); },
+                               "牌面 \"鬼\"", "GetWinTypeStr with 鬼");
+    CheckThrowsInvalidArgument([]()
+                               { CompareStr("方2,梅3,黑2,黑4,鬼", "方2,梅3,黑2,黑4,黑5"); },
+                               "牌面 \"鬼\"", "CompareStr with 鬼");
+
+    // The joker byte 0x58 = 88 belongs to color 5, which the 52-card deck does
+    // not have; both byte-slice and hand-key entry points must reject it.
+    std::vector<int> jokerBytes{0x12, 0x13, 0x24, 0x25, 0x36, 0x37, 0x58};
+    CheckThrowsInvalidArgument([&]()
+                               { CheckPokes(jokerBytes); },
+                               "牌字节 88", "CheckPokes with byte 88");
+    CheckThrowsInvalidArgument([&]()
+                               { GetMax(jokerBytes); },
+                               "牌字节 88", "GetMax with byte 88");
+    CheckThrowsInvalidArgument([&]()
+                               { GetWinPosition(jokerBytes); },
+                               "牌字节 88", "GetWinPosition with byte 88");
+    CheckThrowsInvalidArgument([]()
+                               { GetMaxHandPub({0x12, 0x58}, {0x13, 0x24, 0x25, 0x36}); },
+                               "牌字节 88", "GetMaxHandPub with joker in hand");
+    CheckThrowsInvalidArgument([&]()
+                               { CompareBytes(jokerBytes, std::vector<int>{0x12, 0x13, 0x24, 0x25, 0x36, 0x37, 0x48}); },
+                               "牌字节 88", "CompareBytes with byte 88");
+
+    // A hand key containing a joker card, e.g. 方2 梅3 黑2 黑4 黑5 黑6 鬼, is
+    // rejected by the key based entry points too.
+    int64_t jokerKey = GenCardBindBytes(jokerBytes);
+    CheckThrowsInvalidArgument([&]()
+                               { CheckKey(jokerKey); },
+                               std::to_string(jokerKey), "CheckKey with joker key");
+    CheckThrowsInvalidArgument([&]()
+                               { GetKeyDataKey(jokerKey); },
+                               std::to_string(jokerKey), "GetKeyDataKey with joker key");
+    CheckThrowsInvalidArgument([&]()
+                               { CompareKey(jokerKey, GenCardBindBytes(std::vector<int>{0x12, 0x13, 0x24, 0x25, 0x36, 0x37, 0x48})); },
+                               std::to_string(jokerKey), "CompareKey with joker key");
   }
 
   void TestCardTypes()
@@ -92,21 +145,6 @@ namespace
     CheckCardType("黑A,红K,黑Q,红J,黑9", TexasCardTypeGaoPai);
   }
 
-  void TestWildCardEvaluation()
-  {
-    // 4 cards + 1 Gui -> Royal Flush
-    CheckCardTypeWithGui("黑10,黑J,黑Q,黑K,鬼", TexasCardTypeKingTongHuaShun);
-
-    // 3 cards + 2 Gui -> Straight Flush
-    CheckCardTypeWithGui("方2,方3,方4,鬼,鬼", TexasCardTypeTongHuaShun);
-
-    // Three of a kind + 1 Gui -> Four of a kind
-    CheckCardTypeWithGui("黑A,红A,梅A,黑K,鬼", TexasCardTypeSiTiao);
-
-    // One pair + 1 Gui -> Three of a kind
-    CheckCardTypeWithGui("黑A,红A,黑K,红Q,鬼", TexasCardTypeSanTiao);
-  }
-
   void TestCardComparison()
   {
     std::vector<Poke> royalFlush = ToSortedPokeList("黑10,黑J,黑Q,黑K,黑A");
@@ -125,8 +163,8 @@ namespace
 int main()
 {
   RunTest("TestPokeParsing", true, TestPokeParsing);
+  RunTest("TestJokerRejected", true, TestJokerRejected);
   RunTest("TestCardTypes", true, TestCardTypes);
-  RunTest("TestWildCardEvaluation", true, TestWildCardEvaluation);
   RunTest("TestCardComparison", true, TestCardComparison);
   return ExitCode();
 }

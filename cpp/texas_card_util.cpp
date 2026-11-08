@@ -165,73 +165,6 @@ namespace texas_algorithm
       return TexasCardTypeGaoPai; // 高牌
     }
 
-    // pickBestFromGui enumerates wild-card replacements over AllCards and keeps
-    // the strongest hand, mirroring the gui path of Java's fiveFromFive/Six/Seven.
-    std::vector<Poke> FiveFromWithGui(std::vector<Poke> cards,
-                                      std::vector<Poke> (*withoutGui)(std::vector<Poke>))
-    {
-      int gui = 0;
-      for (const Poke &poke : cards)
-      {
-        if (IsGui(poke))
-        {
-          gui++;
-        }
-      }
-      if (gui == 0)
-      {
-        return withoutGui(cards);
-      }
-
-      std::vector<Poke> left;
-      std::vector<int> leftBytes; // leftMap as set of card bytes
-      for (const Poke &poke : cards)
-      {
-        if (!IsGui(poke))
-        {
-          left.push_back(poke);
-          leftBytes.push_back(PokeToByte(poke));
-        }
-      }
-      auto inLeft = [&leftBytes](int t)
-      {
-        for (int b : leftBytes)
-        {
-          if (b == t)
-          {
-            return true;
-          }
-        }
-        return false;
-      };
-
-      std::vector<Poke> maxCards;
-      std::vector<int> tmp(gui);
-      Permutation(AllCards, 0, 0, gui, tmp, [&](std::vector<int> &tmp)
-                  {
-        for (int t : tmp)
-        {
-          if (inLeft(t) || t == PokeToByte(GUI))
-          {
-            return;
-          }
-        }
-
-        std::vector<Poke> last;
-        last.reserve(left.size() + tmp.size());
-        last.insert(last.end(), left.begin(), left.end());
-        for (int t : tmp)
-        {
-          last.push_back(PokeFromByte(t));
-        }
-        std::vector<Poke> picked = withoutGui(last);
-        if (maxCards.empty() || CompareCardsWithoutGui(picked, maxCards) > 0)
-        {
-          maxCards = picked;
-        } });
-      return maxCards;
-    }
-
   } // namespace
 
   void SortPokesDesc(std::vector<Poke> &cards)
@@ -245,11 +178,6 @@ namespace texas_algorithm
   {
     SortPokesDesc(cards);
     return GetCardType(cards);
-  }
-
-  std::vector<Poke> FiveFromSeven(std::vector<Poke> cards)
-  {
-    return FiveFromWithGui(std::move(cards), FiveFromSevenWithoutGui);
   }
 
   std::vector<Poke> FiveFromSevenWithoutGui(std::vector<Poke> cards)
@@ -286,20 +214,10 @@ namespace texas_algorithm
     return pickedCards;
   }
 
-  std::vector<Poke> FiveFromFive(std::vector<Poke> cards)
-  {
-    return FiveFromWithGui(std::move(cards), FiveFromFiveWithoutGui);
-  }
-
   std::vector<Poke> FiveFromFiveWithoutGui(std::vector<Poke> cards)
   {
     SortPokesDesc(cards);
     return cards;
-  }
-
-  std::vector<Poke> FiveFromSix(std::vector<Poke> cards)
-  {
-    return FiveFromWithGui(std::move(cards), FiveFromSixWithoutGui);
   }
 
   std::vector<Poke> FiveFromSixWithoutGui(std::vector<Poke> cards)

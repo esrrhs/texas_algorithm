@@ -163,7 +163,7 @@ func RemoveColor(k int64) int64 {
 	cs := keyToCards(k)
 
 	for i, c := range cs {
-		if !IsGuiByte(c) {
+		if c>>4 < 4 {
 			cs[i] = int(PokeColorFang)<<4 | (c % 16)
 		}
 	}
@@ -181,7 +181,7 @@ func ChangeColor(k int64) int64 {
 
 	var color [4]int
 	for _, i := range cs {
-		if !IsGuiByte(i) {
+		if i>>4 < 4 {
 			color[byte(i)>>4]++
 		}
 	}
@@ -196,7 +196,7 @@ func ChangeColor(k int64) int64 {
 	}
 
 	for i, c := range cs {
-		if !IsGuiByte(c) {
+		if c>>4 < 4 {
 			if c>>4 == maxColor {
 				cs[i] = int(PokeColorHei)<<4 | (c % 16)
 			} else {

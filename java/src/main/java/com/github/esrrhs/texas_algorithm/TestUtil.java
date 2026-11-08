@@ -13,27 +13,31 @@ public class TestUtil
 	{
 		TexasAlgorithmUtil.load();
 
-		String card = "方2,梅3,黑2,黑4,鬼";
+		//鬼牌已经从 52 张牌堆中移除，解析时会抛 IllegalArgumentException
+		try
+		{
+			TexasAlgorithmUtil.strToPokes("方2,梅3,黑2,黑4,鬼");
+			System.out.println("解析鬼牌应当失败");
+		}
+		catch (IllegalArgumentException e)
+		{
+			System.out.println(e.getMessage());
+		}
+
+		String card = "方2,梅3,黑2,黑4,黑5";
 
 		List<Byte> tmp1 = TexasAlgorithmUtil.strToPokes(card);
 		ArrayList<Poke> tmp = GenUtil.toArray(GenUtil.genCardBind(tmp1));
 
 		ArrayList<Poke> pickedCards = new ArrayList<>();
-		TexasCardUtil.fiveFromFive(tmp, pickedCards);
+		TexasCardUtil.fiveFromFiveWithoutGui(tmp, pickedCards);
 
-		List<Byte> guiTrans = new ArrayList<>();
-		System.out.println(TexasAlgorithmUtil.getMax(card, guiTrans));
-		System.out.println(TexasAlgorithmUtil.pokesToStr(guiTrans));
+		System.out.println(TexasAlgorithmUtil.getMax(card));
+		System.out.println(TexasAlgorithmUtil.getMax("方2,方3,方4,黑5,黑6,红6,红7"));
+		System.out.println(TexasAlgorithmUtil.getMax("黑A,方J,黑8,红8,黑9"));
 
-		System.out.println(TexasAlgorithmUtil.getMax("方2,方3,方4,鬼,鬼,黑6,红6", guiTrans));
-		System.out.println(TexasAlgorithmUtil.pokesToStr(guiTrans));
-
-		System.out.println(TexasAlgorithmUtil.getMax("黑A,方J,黑8,红8,鬼", guiTrans));
-		System.out.println(TexasAlgorithmUtil.pokesToStr(guiTrans));
-
-		card = "方2,鬼,黑2,黑4,黑5,鬼";
-		System.out.println(TexasAlgorithmUtil.getMax(card, guiTrans));
-		System.out.println(TexasAlgorithmUtil.pokesToStr(guiTrans));
+		card = "方2,黑3,黑2,黑4,黑5,黑6";
+		System.out.println(TexasAlgorithmUtil.getMax(card));
 
 		String cards = "方4,方A,黑2,黑A,黑3,黑5,黑6";
 		String cards1 = "红8,方A,方2,黑8,黑3,黑5,黑7";
@@ -61,11 +65,11 @@ public class TestUtil
 		System.out.println(TexasAlgorithmUtil.keyToStr(TexasAlgorithmUtil.getWinMax(cards3)));
 		System.out.println(TexasAlgorithmUtil.getWinType(cards3));
 
-		System.out.println(TexasAlgorithmUtil.getMax("方4,方2", "黑2,黑A,方3,黑5,黑6", null));
-		System.out.println(TexasAlgorithmUtil.getMax("方4,方2", "黑2,黑A,黑7,黑5,黑6", null));
-		System.out.println(TexasAlgorithmUtil.getMax("黑2,黑3", "方2,方A,黑7,黑5,黑6", null));
-		System.out.println(TexasAlgorithmUtil.getMax("黑2,黑3", "方2,方A,黑7,黑5", null));
-		System.out.println(TexasAlgorithmUtil.getMax("黑2,黑3", "方2,黑7,黑5", null));
+		System.out.println(TexasAlgorithmUtil.getMax("方4,方2", "黑2,黑A,方3,黑5,黑6"));
+		System.out.println(TexasAlgorithmUtil.getMax("方4,方2", "黑2,黑A,黑7,黑5,黑6"));
+		System.out.println(TexasAlgorithmUtil.getMax("黑2,黑3", "方2,方A,黑7,黑5,黑6"));
+		System.out.println(TexasAlgorithmUtil.getMax("黑2,黑3", "方2,方A,黑7,黑5"));
+		System.out.println(TexasAlgorithmUtil.getMax("黑2,黑3", "方2,黑7,黑5"));
 
 		TexasAlgorithmUtil.loadProbility();
 		System.out.println(TexasAlgorithmUtil.getHandProbability("方3,方A", "黑2,黑4,黑5,黑K"));

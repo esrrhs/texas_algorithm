@@ -11,13 +11,6 @@ namespace texas_algorithm
 
   const char *const ValueName[15] = {"", "", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"};
 
-  std::string PokeToString(const Poke &p)
-  {
-    if (IsGui(p))
-    {
-      return "鬼";
-    }
-    return std::string(HuaseName[p.color]) + ValueName[p.value];
-  }
+  std::string PokeToString(const Poke &p) { return std::string(HuaseName[p.color]) + ValueName[p.value]; }
 
 } // namespace texas_algorithm

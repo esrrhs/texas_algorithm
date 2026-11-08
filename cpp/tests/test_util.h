@@ -5,6 +5,7 @@
 // FAIL line, and the process exits non-zero when any check fails.
 
 #include <cstdio>
+#include <stdexcept>
 #include <string>
 
 namespace txtest
@@ -40,6 +41,40 @@ namespace txtest
     {
       g_failures++;
       std::printf("    CHECK FAILED: %s (actual=%s, expected=%s)\n", msg.c_str(), actual.c_str(), expected.c_str());
+    }
+  }
+
+  // CheckThrowsInvalidArgument checks that fn throws std::invalid_argument
+  // whose message starts with "无法识别的牌" and contains `contains`. Any other
+  // outcome (including no exception) is a failure.
+  template <typename Fn>
+  inline void CheckThrowsInvalidArgument(Fn fn, const std::string &contains, const std::string &msg)
+  {
+    g_checks++;
+    try
+    {
+      fn();
+      g_failures++;
+      std::printf("    CHECK FAILED: %s (no exception thrown)\n", msg.c_str());
+    }
+    catch (const std::invalid_argument &e)
+    {
+      std::string what = e.what();
+      if (what.rfind("无法识别的牌", 0) != 0 || what.find(contains) == std::string::npos)
+      {
+        g_failures++;
+        std::printf("    CHECK FAILED: %s (unexpected message: %s)\n", msg.c_str(), what.c_str());
+      }
+    }
+    catch (const std::exception &e)
+    {
+      g_failures++;
+      std::printf("    CHECK FAILED: %s (wrong exception: %s)\n", msg.c_str(), e.what());
+    }
+    catch (...)
+    {
+      g_failures++;
+      std::printf("    CHECK FAILED: %s (wrong exception type)\n", msg.c_str());
     }
   }
 

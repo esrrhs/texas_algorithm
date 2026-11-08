@@ -153,51 +153,6 @@ func analyseCards(cards []Poke) analyseResult {
 	return res
 }
 
-// FiveFromSeven picks the best 5 cards out of 7, handling wild cards.
-func FiveFromSeven(cards []Poke) []Poke {
-	gui := 0
-	for _, poke := range cards {
-		if poke.IsGui() {
-			gui++
-		}
-	}
-
-	if gui == 0 {
-		return FiveFromSevenWithoutGui(cards)
-	}
-
-	var left []Poke
-	leftMap := map[int]bool{}
-	for _, poke := range cards {
-		if !poke.IsGui() {
-			left = append(left, poke)
-			leftMap[int(poke.ToByte())] = true
-		}
-	}
-
-	maxCards := []Poke{}
-	tmp := make([]int, gui)
-	Permutation(AllCards, 0, 0, gui, tmp, func(tmp []int) {
-		for _, t := range tmp {
-			if leftMap[t] || t == int(GUI.ToByte()) {
-				return
-			}
-		}
-
-		last := make([]Poke, 0, len(left)+len(tmp))
-		last = append(last, left...)
-		for _, t := range tmp {
-			last = append(last, NewPokeFromByte(byte(t)))
-		}
-		picked := FiveFromSevenWithoutGui(last)
-		if len(maxCards) == 0 || CompareCardsWithoutGui(picked, maxCards) > 0 {
-			maxCards = picked
-		}
-	})
-
-	return maxCards
-}
-
 // FiveFromSevenWithoutGui picks the best 5 cards out of 7 without wild cards.
 func FiveFromSevenWithoutGui(cards []Poke) []Poke {
 	tmpSevenCards := make([]Poke, len(cards))
@@ -226,102 +181,12 @@ func FiveFromSevenWithoutGui(cards []Poke) []Poke {
 	return pickedCards
 }
 
-// FiveFromFive evaluates 5 cards, using wild cards if present.
-func FiveFromFive(cards []Poke) []Poke {
-	gui := 0
-	for _, poke := range cards {
-		if poke.IsGui() {
-			gui++
-		}
-	}
-
-	if gui == 0 {
-		return FiveFromFiveWithoutGui(cards)
-	}
-
-	var left []Poke
-	leftMap := map[int]bool{}
-	for _, poke := range cards {
-		if !poke.IsGui() {
-			left = append(left, poke)
-			leftMap[int(poke.ToByte())] = true
-		}
-	}
-
-	maxCards := []Poke{}
-	tmp := make([]int, gui)
-	Permutation(AllCards, 0, 0, gui, tmp, func(tmp []int) {
-		for _, t := range tmp {
-			if leftMap[t] || t == int(GUI.ToByte()) {
-				return
-			}
-		}
-
-		last := make([]Poke, 0, len(left)+len(tmp))
-		last = append(last, left...)
-		for _, t := range tmp {
-			last = append(last, NewPokeFromByte(byte(t)))
-		}
-		picked := FiveFromFiveWithoutGui(last)
-		if len(maxCards) == 0 || CompareCardsWithoutGui(picked, maxCards) > 0 {
-			maxCards = picked
-		}
-	})
-
-	return maxCards
-}
-
 // FiveFromFiveWithoutGui sorts the 5 cards by value descending.
 func FiveFromFiveWithoutGui(cards []Poke) []Poke {
 	pickedCards := make([]Poke, len(cards))
 	copy(pickedCards, cards)
 	sortPokesDesc(pickedCards)
 	return pickedCards
-}
-
-// FiveFromSix picks the best 5 cards out of 6, handling wild cards.
-func FiveFromSix(cards []Poke) []Poke {
-	gui := 0
-	for _, poke := range cards {
-		if poke.IsGui() {
-			gui++
-		}
-	}
-
-	if gui == 0 {
-		return FiveFromSixWithoutGui(cards)
-	}
-
-	var left []Poke
-	leftMap := map[int]bool{}
-	for _, poke := range cards {
-		if !poke.IsGui() {
-			left = append(left, poke)
-			leftMap[int(poke.ToByte())] = true
-		}
-	}
-
-	maxCards := []Poke{}
-	tmp := make([]int, gui)
-	Permutation(AllCards, 0, 0, gui, tmp, func(tmp []int) {
-		for _, t := range tmp {
-			if leftMap[t] || t == int(GUI.ToByte()) {
-				return
-			}
-		}
-
-		last := make([]Poke, 0, len(left)+len(tmp))
-		last = append(last, left...)
-		for _, t := range tmp {
-			last = append(last, NewPokeFromByte(byte(t)))
-		}
-		picked := FiveFromSixWithoutGui(last)
-		if len(maxCards) == 0 || CompareCardsWithoutGui(picked, maxCards) > 0 {
-			maxCards = picked
-		}
-	})
-
-	return maxCards
 }
 
 // FiveFromSixWithoutGui picks the best 5 cards out of 6 without wild cards.

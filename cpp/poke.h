@@ -33,31 +33,27 @@ namespace texas_algorithm
     int value;
   };
 
-  // GUI is the wild card (ghost card), aligned with Java's Poke.GUI.
-  inline constexpr Poke GUI{5, 8};
-
   constexpr Poke MakePoke(int color, int value) { return Poke{color, value}; }
 
   // PokeFromByte decodes a card byte (high nibble color, low nibble value),
   // the same encoding as Java's new Poke(byteValue).
   constexpr Poke PokeFromByte(int byteValue) { return Poke{byteValue >> 4, byteValue % 16}; }
 
-  // IsGuiByte reports whether the card byte is a wild card,
-  // mirroring Java's static Poke.isGui(int).
-  inline bool IsGuiByte(int i)
+  // IsLegalCardByte reports whether the byte belongs to the standard 52-card
+  // deck: color (high nibble) 0..3 and value (low nibble) 2..14. The removed
+  // joker byte 0x58 (88, color 5) is not legal.
+  inline bool IsLegalCardByte(int i)
   {
     int color = i >> 4;
     int value = i % 16;
-    return value == GUI.value && color == GUI.color;
+    return color >= PokeColorFang && color <= PokeColorHei && value >= PokeValue2 && value <= PokeValueA;
   }
-
-  inline bool IsGui(const Poke &p) { return p.value == GUI.value && p.color == GUI.color; }
 
   // PokeToByte encodes the card into a byte (color<<4 | value).
   inline int PokeToByte(const Poke &p) { return (p.color << 4) | p.value; }
 
   // PokeToString renders the card the same way as Java's Poke.toString:
-  // a Chinese suit name followed by the rank, e.g. "方A", "鬼".
+  // a Chinese suit name followed by the rank, e.g. "方A".
   std::string PokeToString(const Poke &p);
 
   extern const int PokeValues[13];

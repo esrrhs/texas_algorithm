@@ -10,7 +10,7 @@ namespace texas_algorithm
   // Set it before generating, mirroring Java's static GenExtraUtil.N.
   extern int GenExtraN;
 
-  // GenExtraGenKey enumerates all C(54, GenExtraN) combinations.
+  // GenExtraGenKey enumerates all C(52, GenExtraN) combinations.
   void GenExtraGenKey();
 
   // GenExtraOutputData sorts the keys by poker strength and writes

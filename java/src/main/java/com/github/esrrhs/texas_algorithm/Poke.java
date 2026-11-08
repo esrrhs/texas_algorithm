@@ -24,8 +24,6 @@ public final class Poke implements Cloneable
 	public static final byte PokeColor_MEI = 1;
 	public static final byte PokeColor_FANG = 0;
 
-	public static final Poke GUI = new Poke((byte) 5, (byte) 8);
-
 	public byte color;
 	public byte value;
 
@@ -46,17 +44,13 @@ public final class Poke implements Cloneable
 		this.value = (byte) (byteValue % 16);
 	}
 
-	public static boolean isGui(int i)
+	//52 张牌堆的合法牌字节：花色 0..3、点数 2..14。旧版鬼牌字节 88（花色 5）不再合法
+	public static boolean isLegalByte(byte byteValue)
 	{
-		byte color = (byte) (i >> 4);
-		byte value = (byte) (i % 16);
+		byte color = (byte) (byteValue >> 4);
+		byte value = (byte) (byteValue % 16);
 
-		return value == GUI.value && color == GUI.color;
-	}
-
-	public boolean isGui()
-	{
-		return value == GUI.value && color == GUI.color;
+		return color >= PokeColor_FANG && color <= PokeColor_HEI && value >= PokeValue_2 && value <= PokeValue_A;
 	}
 
 	public void setColor(byte color)
@@ -98,10 +92,6 @@ public final class Poke implements Cloneable
 	@Override
 	public String toString()
 	{
-		if (isGui())
-		{
-			return "鬼";
-		}
 		return String.format("%s%s", huaseName[this.color], valueName[this.value]);
 	}
 

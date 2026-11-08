@@ -11,13 +11,10 @@
 namespace texas_algorithm
 {
 
-  // Number of wild cards in the deck, aligned with Java's GenUtil.guiNum.
-  constexpr int GuiNum = 2;
+  // GenNum is the total number of cards in the deck.
+  constexpr int64_t GenNum = 52;
 
-  // GenNum is the total number of cards in the deck (52 + 2 jokers).
-  constexpr int64_t GenNum = 52 + GuiNum;
-
-  // Total is the number of 7-card combinations: C(54, 7).
+  // Total is the number of 7-card combinations: C(52, 7).
   extern int64_t Total;
 
   // UseOpt switches GenCompare to the lookup-table comparator once the
@@ -33,19 +30,19 @@ namespace texas_algorithm
   extern std::atomic<int64_t> LastPrint;
   extern std::atomic<int64_t> BeginPrint;
 
-  // GenKey enumerates all C(54, 7) combinations into Keys.
+  // GenKey enumerates all C(52, 7) combinations into Keys.
   void GenKey();
 
   // OutputData sorts Keys by poker strength and writes texas_data.txt.
   void OutputData();
 
-  // GenAllCards returns all 54 cards as encoded bytes, sorted ascending.
+  // GenAllCards returns all 52 cards as encoded bytes, sorted ascending.
   std::vector<int> GenAllCards();
 
-  // GenAllPokes returns all 54 cards (52 regular cards + 2 jokers).
+  // GenAllPokes returns all 52 cards.
   std::vector<Poke> GenAllPokes();
 
-  // AllCards is the full 54-card deck as encoded bytes, sorted ascending,
+  // AllCards is the full 52-card deck as encoded bytes, sorted ascending,
   // mirroring Java's GenUtil.allCards.
   extern std::vector<int> AllCards;
 

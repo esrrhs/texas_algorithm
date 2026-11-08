@@ -4,6 +4,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -20,14 +21,49 @@ public class TexasCardUtilTest
         assertEquals(Poke.PokeValue_A, p.getValue());
         assertEquals("方A", p.toString());
 
-        byte guiByte = TexasAlgorithmUtil.strToPoke("鬼");
-        Poke gui = new Poke(guiByte);
-        assertTrue(gui.isGui());
-        assertEquals(Poke.GUI.toByte(), gui.toByte());
-
-        List<Byte> pokes = TexasAlgorithmUtil.strToPokes("方2,梅3,黑2,黑4,鬼");
+        List<Byte> pokes = TexasAlgorithmUtil.strToPokes("方2,梅3,黑2,黑4,黑5");
         assertEquals(5, pokes.size());
-        assertEquals("方2梅3黑2黑4鬼", TexasAlgorithmUtil.pokesToStr(pokes));
+        assertEquals("方2梅3黑2黑4黑5", TexasAlgorithmUtil.pokesToStr(pokes));
+    }
+
+    @Test
+    @DisplayName("Test that the removed joker is rejected everywhere")
+    public void testJokerRejected()
+    {
+        // 字符串层面的 "鬼" 已不属于 52 张牌堆
+        assertThrows(IllegalArgumentException.class, () -> TexasAlgorithmUtil.strToPoke("鬼"));
+        assertThrows(IllegalArgumentException.class, () -> TexasAlgorithmUtil.strToPokes("方2,梅3,黑2,黑4,鬼"));
+        assertThrows(IllegalArgumentException.class, () -> TexasAlgorithmUtil.strToPokes("方2,梅3,黑2,黑4,黑5,鬼"));
+        assertThrows(IllegalArgumentException.class, () -> TexasAlgorithmUtil.strToPokes("方2,梅3,黑2,黑4,黑5,黑6,鬼"));
+        assertThrows(IllegalArgumentException.class, () -> TexasAlgorithmUtil.getMax("方2,梅3,黑2,黑4,鬼"));
+
+        // 旧版鬼牌字节 0x58 = 88（花色 5）非法
+        byte[] jokerBytes = { (byte) 0x12, (byte) 0x13, (byte) 0x24, (byte) 0x25, (byte) 0x36, (byte) 0x37,
+                (byte) 0x58 };
+        assertThrows(IllegalArgumentException.class, () -> TexasAlgorithmUtil.checkPokes(jokerBytes));
+
+        List<Byte> jokerPokes = new ArrayList<>();
+        for (byte value : jokerBytes)
+        {
+            jokerPokes.add(value);
+        }
+        assertThrows(IllegalArgumentException.class, () -> TexasAlgorithmUtil.getMax(jokerPokes));
+        assertThrows(IllegalArgumentException.class, () -> TexasAlgorithmUtil.getWinPosition(jokerPokes));
+        assertThrows(IllegalArgumentException.class, () -> TexasAlgorithmUtil.getWinType(jokerPokes));
+
+        List<Byte> handWithJoker = Arrays.asList((byte) 0x12, (byte) 0x58);
+        List<Byte> pub = Arrays.asList((byte) 0x13, (byte) 0x24, (byte) 0x25, (byte) 0x36);
+        assertThrows(IllegalArgumentException.class, () -> TexasAlgorithmUtil.getMax(handWithJoker, pub));
+
+        List<Byte> legalPokes = Arrays.asList((byte) 0x12, (byte) 0x13, (byte) 0x24, (byte) 0x25, (byte) 0x36,
+                (byte) 0x37, (byte) 0x48);
+        assertThrows(IllegalArgumentException.class, () -> TexasAlgorithmUtil.compare(jokerPokes, legalPokes));
+
+        // key 中含鬼牌同样被拒绝
+        long jokerKey = GenUtil.genCardBind(jokerPokes);
+        assertThrows(IllegalArgumentException.class, () -> TexasAlgorithmUtil.getKeyData(jokerKey));
+        assertThrows(IllegalArgumentException.class,
+                () -> TexasAlgorithmUtil.compare(jokerKey, GenUtil.genCardBind(legalPokes)));
     }
 
     @Test
@@ -67,23 +103,6 @@ public class TexasCardUtilTest
     }
 
     @Test
-    @DisplayName("Test wild card (Gui) substitution in 5-card evaluation")
-    public void testWildCardEvaluation()
-    {
-        // 4 cards + 1 Gui -> Royal Flush
-        checkCardTypeWithGui("黑10,黑J,黑Q,黑K,鬼", TexasCardUtil.TEXAS_CARD_TYPE_KINGTONGHUASHUN);
-
-        // 3 cards + 2 Gui -> Straight Flush
-        checkCardTypeWithGui("方2,方3,方4,鬼,鬼", TexasCardUtil.TEXAS_CARD_TYPE_TONGHUASHUN);
-
-        // Three of a kind + 1 Gui -> Four of a kind
-        checkCardTypeWithGui("黑A,红A,梅A,黑K,鬼", TexasCardUtil.TEXAS_CARD_TYPE_SITIAO);
-
-        // One pair + 1 Gui -> Three of a kind
-        checkCardTypeWithGui("黑A,红A,黑K,红Q,鬼", TexasCardUtil.TEXAS_CARD_TYPE_SANTIAO);
-    }
-
-    @Test
     @DisplayName("Test hand comparison")
     public void testCardComparison()
     {
@@ -103,15 +122,6 @@ public class TexasCardUtilTest
         ArrayList<Poke> pokes = toPokeList(cardsStr);
         int actualType = TexasCardUtil.getCardTypeUnorderedWithoutGui(pokes);
         assertEquals(expectedType, actualType, "Failed for cards: " + cardsStr);
-    }
-
-    private void checkCardTypeWithGui(String cardsStr, int expectedType)
-    {
-        ArrayList<Poke> pokes = toPokeList(cardsStr);
-        ArrayList<Poke> picked = new ArrayList<>();
-        TexasCardUtil.fiveFromFive(pokes, picked);
-        int actualType = TexasCardUtil.getCardTypeUnorderedWithoutGui(picked);
-        assertEquals(expectedType, actualType, "Failed with gui for cards: " + cardsStr);
     }
 
     private ArrayList<Poke> toPokeList(String cardsStr)

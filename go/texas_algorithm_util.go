@@ -2,12 +2,15 @@ package texas_algorithm
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -20,20 +23,22 @@ type KeyData struct {
 	Type    int
 }
 
-// ProbilityData holds win-rate statistics of one hand key.
-type ProbilityData struct {
-	Avg float32
-	Min float32
-	Max float32
-}
-
 var (
 	ColorMap  = map[int64]*KeyData{}
 	NormalMap = map[int64]*KeyData{}
 
-	ProbilityMap    [7]map[int64]*ProbilityData
-	OptProbilityMap [7]map[int64]*ProbilityData
+	// WinRateMap[n] holds exact "2 hole cards + n known community cards vs
+	// one random opponent" counts, keyed by the suit-canonical card key.
+	// Only n <= 2 is precomputed; n >= 3 is enumerated on the fly.
+	WinRateMap [3]map[int64]*WinRateData
 )
+
+// WinRateData is the exact win/tie/total count of one canonical situation.
+type WinRateData struct {
+	Win   int64
+	Tie   int64
+	Total int64
+}
 
 // Gen generates texas_data.txt if it does not exist yet.
 func Gen() {
@@ -121,9 +126,16 @@ func IsLoaded() bool {
 	return len(NormalMap) != 0 && len(ColorMap) != 0
 }
 
-// IsProbabilityLoaded reports whether the probability tables are loaded.
+// IsProbabilityLoaded reports whether all three exact win-rate tables
+// (texas_data_winrate_0..2.txt) are in memory. Only the N <= 2 lookups depend
+// on them; N >= 3 is enumerated on the fly and works without any table.
 func IsProbabilityLoaded() bool {
-	return ProbilityMap[2] != nil && len(ProbilityMap[2]) != 0
+	for _, m := range WinRateMap {
+		if len(m) == 0 {
+			return false
+		}
+	}
+	return true
 }
 
 // Load loads the lookup tables from the current directory.
@@ -163,70 +175,69 @@ func LoadProbility() {
 	LoadProbilityDir(".")
 }
 
-// LoadProbilityDir loads the probability tables from the given directory.
+// LoadProbilityDir loads the exact win-rate tables from the given directory.
+// The three tables are independent: a missing texas_data_winrate_N.txt only
+// makes the matching N-card lookup return ErrNoProbabilityData, everything
+// else keeps working.
 func LoadProbilityDir(dir string) {
 	begin := time.Now().UnixMilli()
 
-	for i := 6; i >= 2; i-- {
-		err := LoadProbilityFile(i, filepath.Join(dir, "texas_data_opt_"+strconv.Itoa(i)+".txt"))
+	loaded := 0
+	for i := 0; i <= 2; i++ {
+		err := LoadWinRateFile(i, filepath.Join(dir, "texas_data_winrate_"+strconv.Itoa(i)+".txt"))
 		if err != nil {
 			fmt.Println(err)
-			return
+			continue
 		}
+		loaded++
 	}
 
-	fmt.Println("load time", time.Now().UnixMilli()-begin)
+	fmt.Println("load time", time.Now().UnixMilli()-begin, "tables", loaded)
 }
 
-// LoadProbilityFile loads one probability table file into ProbilityMap[n] /
-// OptProbilityMap[n]. Rows with type 0 go to the plain table, others to the
-// optimized table.
-func LoadProbilityFile(n int, path string) error {
+// LoadWinRateFile loads one exact win-rate table: "<key> <win> <tie> <total>".
+func LoadWinRateFile(n int, path string) error {
 	in, err := os.Open(path)
 	if err != nil {
 		return err
 	}
 	defer in.Close()
-	return loadProbilityFrom(n, in)
-}
-
-func loadProbilityFrom(n int, in *os.File) error {
-	ProbilityMap[n] = map[int64]*ProbilityData{}
-	OptProbilityMap[n] = map[int64]*ProbilityData{}
-
+	m := make(map[int64]*WinRateData, 1<<10)
 	scanner := bufio.NewScanner(in)
 	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
 	for scanner.Scan() {
-		params := strings.Split(scanner.Text(), " ")
+		params := strings.Fields(scanner.Text())
+		if len(params) < 4 {
+			continue
+		}
 		key, err := strconv.ParseInt(params[0], 10, 64)
 		if err != nil {
 			return err
 		}
-		typ, err := strconv.ParseInt(params[1], 10, 64)
+		w, err := strconv.ParseInt(params[1], 10, 64)
 		if err != nil {
 			return err
 		}
-		probility, err := strconv.ParseFloat(params[2], 32)
+		t, err := strconv.ParseInt(params[2], 10, 64)
 		if err != nil {
 			return err
 		}
-		min, err := strconv.ParseFloat(params[3], 32)
+		total, err := strconv.ParseInt(params[3], 10, 64)
 		if err != nil {
 			return err
 		}
-		max, err := strconv.ParseFloat(params[4], 32)
-		if err != nil {
-			return err
-		}
-
-		data := &ProbilityData{Avg: float32(probility), Min: float32(min), Max: float32(max)}
-		if typ == 0 {
-			ProbilityMap[n][key] = data
-		} else {
-			OptProbilityMap[n][key] = data
-		}
+		m[key] = &WinRateData{Win: w, Tie: t, Total: total}
 	}
-	return scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	WinRateMap[n] = m
+	return nil
+}
+
+// IsWinRateLoaded reports whether the exact win-rate tables are loaded.
+func IsWinRateLoaded() bool {
+	return len(WinRateMap[0]) != 0
 }
 
 func loadKeyFile(path string, color bool) error {
@@ -271,45 +282,86 @@ func loadKeyFile(path string, color bool) error {
 	return scanner.Err()
 }
 
-// StrToPokeValue converts a rank string ("2".."10", "J", "Q", "K", "A") into
-// its byte value.
-func StrToPokeValue(str string) byte {
-	switch str {
-	case "A":
-		return PokeValueA
-	case "K":
-		return PokeValueK
-	case "Q":
-		return PokeValueQ
-	case "J":
-		return PokeValueJ
+// ErrUnknownPoke is returned when a card string, card byte or hand key cannot
+// be recognised as cards of the 52-card deck. It replaces the old silent
+// zero/null result that joker input used to produce.
+var ErrUnknownPoke = errors.New("无法识别的牌")
+
+// CheckPoke validates one encoded card byte. Only the 52-card deck is legal:
+// color must be 0..3 and value 2..14. The joker byte 88 (color 5) is rejected.
+func CheckPoke(p byte) error {
+	if p>>4 > 3 || p&0x0f < PokeValue2 || p&0x0f > PokeValueA {
+		return fmt.Errorf("%w: 牌字节 %d", ErrUnknownPoke, p)
 	}
-	v, err := strconv.ParseInt(str, 10, 8)
-	if err != nil {
-		panic(err)
-	}
-	return byte(v)
+	return nil
 }
 
-// StrToPoke converts a card string ("方A", "黑10", "鬼"...) into its byte.
-func StrToPoke(str string) byte {
+// CheckPokes validates every card byte in the slice.
+func CheckPokes(pokes []byte) error {
+	for _, p := range pokes {
+		if err := CheckPoke(p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// CheckKey validates the cards encoded in a hand key.
+func CheckKey(key int64) error {
+	for _, c := range keyToCards(key) {
+		if err := CheckPoke(byte(c)); err != nil {
+			return fmt.Errorf("%w: 牌 key %d", ErrUnknownPoke, key)
+		}
+	}
+	return nil
+}
+
+// StrToPokeValue converts a rank string ("2".."10", "J", "Q", "K", "A") into
+// its byte value.
+func StrToPokeValue(str string) (byte, error) {
+	switch str {
+	case "A":
+		return PokeValueA, nil
+	case "K":
+		return PokeValueK, nil
+	case "Q":
+		return PokeValueQ, nil
+	case "J":
+		return PokeValueJ, nil
+	}
+	v, err := strconv.ParseInt(str, 10, 8)
+	if err != nil || byte(v) < PokeValue2 || byte(v) > PokeValueA {
+		return 0, fmt.Errorf("%w: 牌面 %q", ErrUnknownPoke, str)
+	}
+	return byte(v), nil
+}
+
+// StrToPoke converts a card string ("方A", "黑10") into its byte. An empty
+// string, an unknown suit or rank, and the removed joker card ("鬼") all
+// return ErrUnknownPoke.
+func StrToPoke(str string) (byte, error) {
 	r := []rune(str)
 	if len(r) == 0 {
-		return 0
+		return 0, fmt.Errorf("%w: 空牌面", ErrUnknownPoke)
 	}
+	var color byte
 	switch r[0] {
 	case '方':
-		return NewPoke(PokeColorFang, StrToPokeValue(string(r[1:]))).ToByte()
+		color = PokeColorFang
 	case '梅':
-		return NewPoke(PokeColorMei, StrToPokeValue(string(r[1:]))).ToByte()
+		color = PokeColorMei
 	case '红':
-		return NewPoke(PokeColorHong, StrToPokeValue(string(r[1:]))).ToByte()
+		color = PokeColorHong
 	case '黑':
-		return NewPoke(PokeColorHei, StrToPokeValue(string(r[1:]))).ToByte()
-	case '鬼':
-		return NewPoke(GUI.Color, GUI.Value).ToByte()
+		color = PokeColorHei
+	default:
+		return 0, fmt.Errorf("%w: 牌面 %q", ErrUnknownPoke, str)
 	}
-	return 0
+	value, err := StrToPokeValue(string(r[1:]))
+	if err != nil {
+		return 0, fmt.Errorf("%w: 牌面 %q", ErrUnknownPoke, str)
+	}
+	return NewPoke(color, value).ToByte(), nil
 }
 
 // KeyToStr renders a key as its concatenated card strings.
@@ -344,16 +396,21 @@ func KeyToPoke(k int64) []byte {
 	return cs
 }
 
-// StrToPokes converts a comma-separated card string into card bytes.
-func StrToPokes(str string) []byte {
+// StrToPokes converts a comma-separated card string into card bytes. Any
+// unrecognised card makes the whole conversion fail with ErrUnknownPoke.
+func StrToPokes(str string) ([]byte, error) {
 	var ret []byte
 	if len(str) == 0 {
-		return ret
+		return ret, nil
 	}
 	for _, s := range strings.Split(str, ",") {
-		ret = append(ret, StrToPoke(s))
+		p, err := StrToPoke(s)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, p)
 	}
-	return ret
+	return ret, nil
 }
 
 // PokesToStr renders card bytes as their concatenated card strings.
@@ -361,25 +418,50 @@ func PokesToStr(pokes []byte) string {
 	return KeyToStr(GenCardBindBytes(pokes))
 }
 
-// GetKeyDataStr looks up a 7-card comma-separated string; returns nil when the
-// string is not exactly 7 cards.
-func GetKeyDataStr(str string) *KeyData {
-	pokes := StrToPokes(str)
+// GetKeyDataStr looks up a 7-card comma-separated string. It returns
+// ErrUnknownPoke for an unrecognised card and an error when the string does
+// not contain exactly 7 cards.
+func GetKeyDataStr(str string) (*KeyData, error) {
+	pokes, err := StrToPokes(str)
+	if err != nil {
+		return nil, err
+	}
 	if len(pokes) != 7 {
-		return nil
+		return nil, fmt.Errorf("%w: 需要 7 张牌，实际 %d 张", ErrUnknownPoke, len(pokes))
 	}
 	return GetKeyData(pokes)
 }
 
 // GetKeyData looks up the best-hand data of the given cards.
-func GetKeyData(pokes []byte) *KeyData {
-	return GetKeyDataKey(GenCardBindBytes(pokes))
+func GetKeyData(pokes []byte) (*KeyData, error) {
+	if err := CheckPokes(pokes); err != nil {
+		return nil, err
+	}
+	data := LookupKeyData(GenCardBindBytes(pokes))
+	if data == nil {
+		return nil, fmt.Errorf("%w: 未找到 key %d 的牌力数据", ErrUnknownPoke, GenCardBindBytes(pokes))
+	}
+	return data, nil
 }
 
-// GetKeyDataKey looks up the best-hand data of the given 7-card key: the
-// suit-normalized flush table and the suit-stripped normal table are both
-// consulted, and the entry with the higher rank wins.
-func GetKeyDataKey(key int64) *KeyData {
+// GetKeyDataKey looks up the best-hand data of the given 7-card key. The key is
+// checked against the 52-card deck first, so a key holding the removed joker
+// byte 88 is rejected with ErrUnknownPoke.
+func GetKeyDataKey(key int64) (*KeyData, error) {
+	if err := CheckKey(key); err != nil {
+		return nil, err
+	}
+	data := LookupKeyData(key)
+	if data == nil {
+		return nil, fmt.Errorf("%w: 未找到 key %d 的牌力数据", ErrUnknownPoke, key)
+	}
+	return data, nil
+}
+
+// LookupKeyData looks up the best-hand data of a 7-card key without validating
+// the key. It is the unvalidated hot path used by the table generator, and
+// returns nil when the key is absent from the loaded tables.
+func LookupKeyData(key int64) *KeyData {
 	colorKey := ChangeColor(key)
 	color := ColorMap[colorKey]
 	normalKey := RemoveColor(key)
@@ -397,25 +479,45 @@ func GetKeyDataKey(key int64) *KeyData {
 }
 
 // GetMaxStr returns the best 5-card hand of a comma-separated card list
-// (5-7 cards) together with the wild-card substitution list.
-func GetMaxStr(str string) (string, []byte) {
-	best, guiTrans := GetMax(StrToPokes(str))
-	return PokesToStr(best), guiTrans
+// (5-7 cards).
+func GetMaxStr(str string) (string, error) {
+	pokes, err := StrToPokes(str)
+	if err != nil {
+		return "", err
+	}
+	best, err := GetMax(pokes)
+	if err != nil {
+		return "", err
+	}
+	return PokesToStr(best), nil
 }
 
 // GetMaxStrHandPub returns the best 5-card hand of 2 hole cards and 3-5
-// community cards, together with the wild-card substitution list.
-func GetMaxStrHandPub(hand, pub string) (string, []byte) {
-	best, guiTrans := GetMaxHandPub(StrToPokes(hand), StrToPokes(pub))
-	return PokesToStr(best), guiTrans
+// community cards.
+func GetMaxStrHandPub(hand, pub string) (string, error) {
+	handPokes, err := StrToPokes(hand)
+	if err != nil {
+		return "", err
+	}
+	pubPokes, err := StrToPokes(pub)
+	if err != nil {
+		return "", err
+	}
+	best, err := GetMaxHandPub(handPokes, pubPokes)
+	if err != nil {
+		return "", err
+	}
+	return PokesToStr(best), nil
 }
 
 // GetMax returns the best 5-card hand of the given cards (2 hole cards
-// followed by 3-5 community cards) together with the wild-card substitution
-// list.
-func GetMax(pokes []byte) ([]byte, []byte) {
+// followed by 3-5 community cards).
+func GetMax(pokes []byte) ([]byte, error) {
 	if len(pokes) < 5 || len(pokes) > 7 {
-		return []byte{}, nil
+		return nil, fmt.Errorf("%w: 需要 5-7 张牌，实际 %d 张", ErrUnknownPoke, len(pokes))
+	}
+	if err := CheckPokes(pokes); err != nil {
+		return nil, err
 	}
 	hand := []byte{pokes[0], pokes[1]}
 	pub := append([]byte{}, pokes[2:]...)
@@ -423,20 +525,35 @@ func GetMax(pokes []byte) ([]byte, []byte) {
 }
 
 // GetMaxHandPub returns the best 5-card hand of 2 hole cards and 3-5
-// community cards, together with the wild-card substitution list. It maps the
-// stored best-hand key back onto the actual cards that were dealt.
-func GetMaxHandPub(hand, pub []byte) ([]byte, []byte) {
-	var ret []byte
+// community cards. It maps the stored best-hand key back onto the actual cards
+// that were dealt.
+func GetMaxHandPub(hand, pub []byte) ([]byte, error) {
 	if len(hand) != 2 {
-		return ret, nil
+		return nil, fmt.Errorf("%w: 手牌需要 2 张，实际 %d 张", ErrUnknownPoke, len(hand))
 	}
 	if len(pub) < 3 || len(pub) > 5 {
-		return ret, nil
+		return nil, fmt.Errorf("%w: 公牌需要 3-5 张，实际 %d 张", ErrUnknownPoke, len(pub))
 	}
+	if err := CheckPokes(hand); err != nil {
+		return nil, err
+	}
+	if err := CheckPokes(pub); err != nil {
+		return nil, err
+	}
+	ret := maxHandPub(hand, pub)
+	if len(ret) == 0 {
+		return nil, fmt.Errorf("%w: 未找到这手牌的牌力数据", ErrUnknownPoke)
+	}
+	return ret, nil
+}
+
+// maxHandPub is the unvalidated implementation behind GetMaxHandPub.
+func maxHandPub(hand, pub []byte) []byte {
+	var ret []byte
 	tmp := append(append([]byte{}, hand...), pub...)
-	keyData := GetKeyData(tmp)
+	keyData := LookupKeyData(GenCardBindBytes(tmp))
 	if keyData == nil {
-		return ret, nil
+		return ret
 	}
 
 	max := KeyToPoke(keyData.Max)
@@ -449,9 +566,7 @@ func GetMaxHandPub(hand, pub []byte) ([]byte, []byte) {
 		keyData.Type == TexasCardTypeKingTongHuaShun {
 		var srccolor [4]int
 		for _, c := range tmp {
-			if !IsGuiByte(int(c)) {
-				srccolor[c>>4]++
-			}
+			srccolor[c>>4]++
 		}
 
 		srcmaxColor := 0
@@ -499,7 +614,7 @@ func GetMaxHandPub(hand, pub []byte) ([]byte, []byte) {
 	} else {
 		for j := 0; j < len(pubtmp); j++ {
 			for i := 0; i < len(max); i++ {
-				if pubtmp[j] == max[i] && max[i] != 0 && pubtmp[j] != 0 && !IsGuiByte(int(pubtmp[j])) {
+				if pubtmp[j] == max[i] && max[i] != 0 && pubtmp[j] != 0 {
 					ret = append(ret, pubtmp[j])
 
 					max[i] = 0
@@ -511,7 +626,7 @@ func GetMaxHandPub(hand, pub []byte) ([]byte, []byte) {
 
 		for j := 0; j < len(handtmp); j++ {
 			for i := 0; i < len(max); i++ {
-				if handtmp[j] == max[i] && max[i] != 0 && handtmp[j] != 0 && !IsGuiByte(int(handtmp[j])) {
+				if handtmp[j] == max[i] && max[i] != 0 && handtmp[j] != 0 {
 					ret = append(ret, handtmp[j])
 
 					max[i] = 0
@@ -523,7 +638,7 @@ func GetMaxHandPub(hand, pub []byte) ([]byte, []byte) {
 
 		for i := 0; i < len(max); i++ {
 			for j := 0; j < len(pubtmp); j++ {
-				if int(pubtmp[j]%16) == int(max[i]%16) && max[i] != 0 && pubtmp[j] != 0 && !IsGuiByte(int(pubtmp[j])) {
+				if int(pubtmp[j]%16) == int(max[i]%16) && max[i] != 0 && pubtmp[j] != 0 {
 					ret = append(ret, pubtmp[j])
 
 					max[i] = 0
@@ -536,7 +651,7 @@ func GetMaxHandPub(hand, pub []byte) ([]byte, []byte) {
 		if len(ret) < 5 {
 			for i := 0; i < len(max); i++ {
 				for j := 0; j < len(handtmp); j++ {
-					if int(handtmp[j]%16) == int(max[i]%16) && max[i] != 0 && handtmp[j] != 0 && !IsGuiByte(int(handtmp[j])) {
+					if int(handtmp[j]%16) == int(max[i]%16) && max[i] != 0 && handtmp[j] != 0 {
 						ret = append(ret, handtmp[j])
 
 						max[i] = 0
@@ -548,43 +663,36 @@ func GetMaxHandPub(hand, pub []byte) ([]byte, []byte) {
 		}
 	}
 
-	for len(ret) < 5 {
-		ret = append(ret, GUI.ToByte())
-	}
-
-	var guiTrans []byte
-	for _, m := range max {
-		if m != 0 {
-			guiTrans = append(guiTrans, m)
-		}
-	}
-
 	sort.Slice(ret, func(a, b int) bool { return ret[a] < ret[b] })
 
-	return ret, guiTrans
+	return ret
 }
 
 // GetWinPosition returns the absolute rank of the given cards among all
 // combinations of the same size.
-func GetWinPosition(pokes []byte) int {
-	keyData := GetKeyData(pokes)
-	if keyData == nil {
-		return 0
+func GetWinPosition(pokes []byte) (int, error) {
+	keyData, err := GetKeyData(pokes)
+	if err != nil {
+		return 0, err
 	}
-	return keyData.Postion
+	return keyData.Postion, nil
 }
 
 // GetWinPositionStr is GetWinPosition for a comma-separated card string.
-func GetWinPositionStr(str string) int {
-	return GetWinPosition(StrToPokes(str))
+func GetWinPositionStr(str string) (int, error) {
+	pokes, err := StrToPokes(str)
+	if err != nil {
+		return 0, err
+	}
+	return GetWinPosition(pokes)
 }
 
 // GetWinProbability returns the rank ratio of the given cards among all
 // combinations of the same size.
-func GetWinProbability(pokes []byte) float64 {
-	keyData := GetKeyData(pokes)
-	if keyData == nil {
-		return 0
+func GetWinProbability(pokes []byte) (float64, error) {
+	keyData, err := GetKeyData(pokes)
+	if err != nil {
+		return 0, err
 	}
 	total := int64(1)
 	for i := 0; i < len(pokes); i++ {
@@ -593,47 +701,72 @@ func GetWinProbability(pokes []byte) float64 {
 	for i := len(pokes); i >= 1; i-- {
 		total = total / int64(i)
 	}
-	return float64(keyData.Index) / float64(total)
+	return float64(keyData.Index) / float64(total), nil
 }
 
 // GetWinProbabilityStr is GetWinProbability for a comma-separated string.
-func GetWinProbabilityStr(str string) float64 {
-	return GetWinProbability(StrToPokes(str))
+func GetWinProbabilityStr(str string) (float64, error) {
+	pokes, err := StrToPokes(str)
+	if err != nil {
+		return 0, err
+	}
+	return GetWinProbability(pokes)
 }
 
 // GetWinMax returns the encoded key of the best 5-card hand.
-func GetWinMax(pokes []byte) int64 {
-	keyData := GetKeyData(pokes)
-	if keyData == nil {
-		return 0
+func GetWinMax(pokes []byte) (int64, error) {
+	keyData, err := GetKeyData(pokes)
+	if err != nil {
+		return 0, err
 	}
-	return keyData.Max
+	return keyData.Max, nil
 }
 
 // GetWinMaxStr is GetWinMax for a comma-separated card string.
-func GetWinMaxStr(str string) int64 {
-	return GetWinMax(StrToPokes(str))
+func GetWinMaxStr(str string) (int64, error) {
+	pokes, err := StrToPokes(str)
+	if err != nil {
+		return 0, err
+	}
+	return GetWinMax(pokes)
 }
 
 // GetWinType returns the card type constant of the given cards.
-func GetWinType(pokes []byte) int {
-	keyData := GetKeyData(pokes)
-	if keyData == nil {
-		return 0
+func GetWinType(pokes []byte) (int, error) {
+	keyData, err := GetKeyData(pokes)
+	if err != nil {
+		return 0, err
 	}
-	return keyData.Type
+	return keyData.Type, nil
 }
 
 // GetWinTypeStr is GetWinType for a comma-separated card string.
-func GetWinTypeStr(str string) int {
-	return GetWinType(StrToPokes(str))
+func GetWinTypeStr(str string) (int, error) {
+	pokes, err := StrToPokes(str)
+	if err != nil {
+		return 0, err
+	}
+	return GetWinType(pokes)
 }
 
 // CompareKey compares two hand keys by rank. Returns a positive value when k1
-// is stronger, 0 when equal, negative when weaker.
-func CompareKey(k1, k2 int64) int {
-	keyData1 := GetKeyDataKey(k1)
-	keyData2 := GetKeyDataKey(k2)
+// is stronger, 0 when equal, negative when weaker. Keys holding cards outside
+// the 52-card deck are rejected.
+func CompareKey(k1, k2 int64) (int, error) {
+	if err := CheckKey(k1); err != nil {
+		return 0, err
+	}
+	if err := CheckKey(k2); err != nil {
+		return 0, err
+	}
+	return compareKey(k1, k2), nil
+}
+
+// compareKey is the unvalidated implementation behind CompareKey; it is the
+// hot path used while sorting generated keys.
+func compareKey(k1, k2 int64) int {
+	keyData1 := LookupKeyData(k1)
+	keyData2 := LookupKeyData(k2)
 	if keyData1 == nil && keyData2 == nil {
 		return 0
 	}
@@ -647,97 +780,313 @@ func CompareKey(k1, k2 int64) int {
 }
 
 // CompareBytes compares two hands given as card bytes.
-func CompareBytes(bytes1, bytes2 []byte) int {
-	return CompareKey(GenCardBindBytes(bytes1), GenCardBindBytes(bytes2))
+func CompareBytes(bytes1, bytes2 []byte) (int, error) {
+	if err := CheckPokes(bytes1); err != nil {
+		return 0, err
+	}
+	if err := CheckPokes(bytes2); err != nil {
+		return 0, err
+	}
+	return compareKey(GenCardBindBytes(bytes1), GenCardBindBytes(bytes2)), nil
 }
 
 // CompareStr compares two hands given as comma-separated card strings.
-func CompareStr(str1, str2 string) int {
-	return CompareBytes(StrToPokes(str1), StrToPokes(str2))
+func CompareStr(str1, str2 string) (int, error) {
+	pokes1, err := StrToPokes(str1)
+	if err != nil {
+		return 0, err
+	}
+	pokes2, err := StrToPokes(str2)
+	if err != nil {
+		return 0, err
+	}
+	return CompareBytes(pokes1, pokes2)
 }
 
-// GetHandProbabilityKey returns the stored win-rate statistics of a key with
-// 2-6 cards, or nil when out of range or not loaded.
-func GetHandProbabilityKey(k int64) *ProbilityData {
-	num := 0
-	if k > 10000000000 {
-		num = 6
-	} else if k > 100000000 {
-		num = 5
-	} else if k > 1000000 {
-		num = 4
-	} else if k > 10000 {
-		num = 3
-	} else if k > 100 {
-		num = 2
-	}
-	if num < 2 || num > 6 {
-		return nil
-	}
-	if ProbilityMap[num] == nil || OptProbilityMap[num] == nil {
-		return nil
-	}
-
-	probilityData := ProbilityMap[num][k]
-	if probilityData == nil {
-		k = RemoveColor(k)
-		probilityData = OptProbilityMap[num][k]
-	}
-	return probilityData
-}
+// ErrNoProbabilityData is returned when the win-rate tables that
+// GetHandProbability needs are not loaded or do not contain the hand.
+var ErrNoProbabilityData = errors.New("缺少胜率表数据")
 
 // GetHandProbabilityKeyPub is GetHandProbability with hand and public cards
 // given as encoded keys.
-func GetHandProbabilityKeyPub(hand, pub int64) float32 {
+func GetHandProbabilityKeyPub(hand, pub int64) (float32, error) {
+	if err := CheckKey(hand); err != nil {
+		return 0, err
+	}
+	if err := CheckKey(pub); err != nil {
+		return 0, err
+	}
 	return GetHandProbability(KeyToPoke(hand), KeyToPoke(pub))
 }
 
-// GetHandProbability estimates the 1v1 win probability of 2 hole cards plus
-// 0-4 community cards. Requires the probability tables to be loaded.
-func GetHandProbability(hand, pub []byte) float32 {
-	allCards := append(append([]byte{}, hand...), pub...)
-	sort.Slice(allCards, func(a, b int) bool { return allCards[a] < allCards[b] })
-	pubCopy := append([]byte{}, pub...)
-	sort.Slice(pubCopy, func(a, b int) bool { return pubCopy[a] < pubCopy[b] })
-	pubkey := GenCardBindBytes(pubCopy)
-
-	pubProbilityData := GetHandProbabilityKey(pubkey)
-
-	var avg float32
-	if len(allCards) == 7 {
-		avg = float32(GetWinProbability(allCards))
-	} else {
-		totalkey := GenCardBindBytes(allCards)
-		totalProbilityData := GetHandProbabilityKey(totalkey)
-		if totalProbilityData == nil {
-			return 0
+// GetHandProbability returns the exact 1v1 win probability of 2 hole cards
+// plus 0-5 community cards against one random opponent hand. Ties count as
+// half a win: P = (W + 0.5*T) / (W + T + L).
+//
+// n community cards below 3 are answered from the precomputed exact tables
+// (texas_data_winrate_0..2.txt, keyed by the suit-canonical card key). Three
+// or more community cards are enumerated on the fly, comparing the Index of
+// the new strength tables instead of re-evaluating hands.
+func GetHandProbability(hand, pub []byte) (float32, error) {
+	if err := CheckPokes(hand); err != nil {
+		return 0, err
+	}
+	if err := CheckPokes(pub); err != nil {
+		return 0, err
+	}
+	if len(hand) != 2 || len(pub) > 5 {
+		return 0, ErrNoProbabilityData
+	}
+	if len(pub) >= 3 {
+		win, tie, loss := EquityExact(hand, pub)
+		total := win + tie + loss
+		if total == 0 {
+			return 0, ErrNoProbabilityData
 		}
-		avg = totalProbilityData.Avg
+		return float32((2*float64(win) + float64(tie)) / (2 * float64(total))), nil
+	}
+	m := WinRateMap[len(pub)]
+	if len(m) == 0 {
+		return 0, ErrNoProbabilityData
+	}
+	cards := append(append([]byte{}, hand...), pub...)
+	data := m[CanonKey(cards, len(hand))]
+	if data == nil || data.Total == 0 {
+		return 0, ErrNoProbabilityData
+	}
+	return float32((2*float64(data.Win) + float64(data.Tie)) / (2 * float64(data.Total))), nil
+}
+
+// deck52 returns the 52 card bytes in ascending order.
+func deck52() [52]byte {
+	var d [52]byte
+	n := 0
+	for c := byte(0); c < 4; c++ {
+		for v := byte(PokeValue2); v <= PokeValueA; v++ {
+			d[n] = c<<4 | v
+			n++
+		}
+	}
+	return d
+}
+
+// CanonKey returns the suit-canonical key of a situation made of the first
+// nHole cards plus the remaining public cards. Each suit is labelled 0..3 by
+// sorting the suits on its signature (which ranks it holds, and which of those
+// are hole cards), which is invariant under the 24-element suit permutation
+// group; suits sharing a signature hold the same (rank, role) pairs, so any
+// tie-break yields the same labelled cards. Hole cards and public cards occupy
+// separate positions of the key because the two roles are not interchangeable.
+// It is the key of the exact win-rate tables and must stay in sync with the
+// generator in cmd/genrate.
+func CanonKey(cards []byte, nHole int) int64 {
+	var mask, hole [4]int
+	for i, c := range cards {
+		mask[c>>4] |= 1 << (c & 0x0f)
+		if i < nHole {
+			hole[c>>4] |= 1 << (c & 0x0f)
+		}
+	}
+	var label [4]int8
+	used := [4]bool{}
+	for k := int8(0); k < 4; k++ {
+		best, bestSig := -1, 0
+		for s := 0; s < 4; s++ {
+			if used[s] {
+				continue
+			}
+			sig := mask[s]<<16 | hole[s]
+			if best < 0 || sig < bestSig {
+				best, bestSig = s, sig
+			}
+		}
+		used[best] = true
+		label[best] = k
 	}
 
-	if pubProbilityData == nil {
-		return avg
+	var holeCards, pubCards [5]byte
+	nh, np := 0, 0
+	for i, c := range cards {
+		b := byte(label[c>>4])<<4 | (c & 0x0f)
+		if i < nHole {
+			holeCards[nh] = b
+			nh++
+		} else {
+			pubCards[np] = b
+			np++
+		}
+	}
+	sortCardsAsc(holeCards[:nh])
+	sortCardsAsc(pubCards[:np])
+
+	var k int64
+	for i := 0; i < nh; i++ {
+		k = k*100 + int64(holeCards[i])
+	}
+	for i := 0; i < np; i++ {
+		k = k*100 + int64(pubCards[i])
+	}
+	return k
+}
+
+// key7Board merges two ascending cards x<y into the ascending 5-card board and
+// returns the 7-card key.
+func key7Board(b *[5]byte, x, y byte) int64 {
+	var buf [7]byte
+	i, j := 0, 0
+	for j < 5 {
+		if i == 0 && x < b[j] {
+			buf[i+j] = x
+			i++
+			continue
+		}
+		if i == 1 && y < b[j] {
+			buf[i+j] = y
+			i++
+			continue
+		}
+		buf[i+j] = b[j]
+		j++
+	}
+	if i == 0 {
+		buf[5] = x
+		buf[6] = y
+	} else if i == 1 {
+		buf[6] = y
+	}
+	var k int64
+	for n := 0; n < 7; n++ {
+		k = k*100 + int64(buf[n])
+	}
+	return k
+}
+
+// sortCardsAsc sorts a small card slice ascending.
+func sortCardsAsc(cs []byte) {
+	for i := 1; i < len(cs); i++ {
+		for j := i; j > 0 && cs[j] < cs[j-1]; j-- {
+			cs[j], cs[j-1] = cs[j-1], cs[j]
+		}
+	}
+}
+
+// EquityExact enumerates every completion of the community cards and every
+// opponent hole-card pair, and counts wins, ties and losses of the given 2
+// hole cards. Ties count as half a win in GetHandProbability. Opponent cards
+// never include a hero card, and every (board, opponent) pair is counted
+// exactly once.
+func EquityExact(hand, pub []byte) (win, tie, loss int64) {
+	var known [7]byte
+	copy(known[:], hand)
+	copy(known[len(hand):], pub)
+	used := make(map[byte]bool, len(known))
+	for _, c := range known {
+		used[c] = true
+	}
+	var rest []byte
+	d := deck52()
+	for _, c := range d {
+		if !used[c] {
+			rest = append(rest, c)
+		}
 	}
 
-	p := float32(0.5)
-
-	if avg > pubProbilityData.Avg {
-		p += 0.5 * (avg - pubProbilityData.Avg) / (pubProbilityData.Max - pubProbilityData.Avg)
-	} else {
-		p += 0.5 * (avg - pubProbilityData.Avg) / (pubProbilityData.Avg - pubProbilityData.Min)
+	need := 5 - len(pub)
+	var board [5]byte
+	copy(board[:], pub)
+	var boards [][5]byte
+	var gen func(start, depth int)
+	gen = func(start, depth int) {
+		if depth == need {
+			b := board
+			sortCardsAsc(b[:])
+			boards = append(boards, b)
+			return
+		}
+		for i := start; i <= len(rest)-(need-depth); i++ {
+			board[len(pub)+depth] = rest[i]
+			gen(i+1, depth+1)
+		}
 	}
+	gen(0, 0)
 
-	if p > 1 {
-		p = 1
-	}
-	if p < 0 {
-		p = 0
-	}
+	heroCards := []byte{hand[0], hand[1]}
+	sortCardsAsc(heroCards)
 
-	return p
+	var wg sync.WaitGroup
+	workers := 1
+	// 20k evaluations is roughly the point where the split pays for the
+	// goroutine hand-off: N>=4 (45,540 pairs) benefits, N=5 (990) does not.
+	if len(boards)*990 >= 20000 {
+		workers = runtime.NumCPU()
+	}
+	results := make([]struct{ w, t, l int64 }, workers)
+	chunk := (len(boards) + workers - 1) / workers
+	for w := 0; w < workers; w++ {
+		from := w * chunk
+		to := from + chunk
+		if to > len(boards) {
+			to = len(boards)
+		}
+		if from >= to {
+			continue
+		}
+		wg.Add(1)
+		go func(slot, from, to int) {
+			defer wg.Done()
+			var w, t, l int64
+			for _, b := range boards[from:to] {
+				var opp [45]byte
+				n := 0
+				for _, c := range rest {
+					if c == b[0] || c == b[1] || c == b[2] || c == b[3] || c == b[4] {
+						continue
+					}
+					opp[n] = c
+					n++
+				}
+				hero := LookupKeyData(key7Board(&b, heroCards[0], heroCards[1]))
+				if hero == nil {
+					continue
+				}
+				for i := 0; i < n; i++ {
+					for j := i + 1; j < n; j++ {
+						data := LookupKeyData(key7Board(&b, opp[i], opp[j]))
+						if data == nil {
+							continue
+						}
+						switch {
+						case hero.Index > data.Index:
+							w++
+						case hero.Index == data.Index:
+							t++
+						default:
+							l++
+						}
+					}
+				}
+			}
+			results[slot].w, results[slot].t, results[slot].l = w, t, l
+		}(w, from, to)
+	}
+	wg.Wait()
+	for _, r := range results {
+		win += r.w
+		tie += r.t
+		loss += r.l
+	}
+	return win, tie, loss
 }
 
 // GetHandProbabilityStr is GetHandProbability for comma-separated strings.
-func GetHandProbabilityStr(hand, pub string) float32 {
-	return GetHandProbability(StrToPokes(hand), StrToPokes(pub))
+func GetHandProbabilityStr(hand, pub string) (float32, error) {
+	handPokes, err := StrToPokes(hand)
+	if err != nil {
+		return 0, err
+	}
+	pubPokes, err := StrToPokes(pub)
+	if err != nil {
+		return 0, err
+	}
+	return GetHandProbability(handPokes, pubPokes)
 }

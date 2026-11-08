@@ -195,7 +195,9 @@ public class GenOptUtil
 		for (int i = 0; i < cs.size(); i++)
 		{
 			int c = cs.get(i);
-			if (!Poke.isGui(c))
+			//只用 52 张合法牌字节参与花色归一：非 0..3 的花色（如旧版鬼牌 88 的花色 5）非法，
+			//直接跳过可保证下面的位运算不会把非法花色写回 key
+			if (Poke.isLegalByte((byte) c))
 			{
 				cs.set(i, (Poke.PokeColor_FANG << 4 | (c % 16)));
 			}
@@ -246,7 +248,9 @@ public class GenOptUtil
 		int[] color = new int[4];
 		for (Integer i : cs)
 		{
-			if (!Poke.isGui(i))
+			//必须只统计合法牌：旧版靠 isGui 跳过鬼牌，现在改为合法牌校验，
+			//否则非法花色（如 88 的花色 5）会让 color[i >> 4] 数组越界
+			if (Poke.isLegalByte((byte) (int) i))
 			{
 				color[i >> 4]++;
 			}
@@ -266,7 +270,8 @@ public class GenOptUtil
 		for (int i = 0; i < cs.size(); i++)
 		{
 			int c = cs.get(i);
-			if (!Poke.isGui(c))
+			//同上：只处理 52 张合法牌字节，避免非法花色被归一化
+			if (Poke.isLegalByte((byte) c))
 			{
 				if ((c >> 4) == maxColor)
 				{

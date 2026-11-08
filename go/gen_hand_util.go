@@ -187,7 +187,7 @@ func genHandCalcCompare(data *genHandCalcData, hand, pub, leftpub, otherhand []i
 		other = append(other, byte(i))
 	}
 
-	ret := CompareBytes(my, other)
+	ret := compareKey(GenCardBindBytes(my), GenCardBindBytes(other))
 	if ret == 0 {
 		data.tie++
 	} else if ret < 0 {
