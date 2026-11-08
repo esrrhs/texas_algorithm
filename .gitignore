@@ -18,9 +18,20 @@ Thumbs.db
 .settings/
 .vscode/
 
-# Extracted data files (tracked in texas_algorithm.rar)
+# Data tables: the 9 runtime files are committed at the repo root (see README "Data Package").
+# Generator intermediates and per-language copies stay untracked.
 texas_data*.txt
+!texas_data_color.txt
+!texas_data_normal.txt
+!texas_data_extra_color_5.txt
+!texas_data_extra_color_6.txt
+!texas_data_extra_normal_5.txt
+!texas_data_extra_normal_6.txt
+!texas_data_winrate_0.txt
+!texas_data_winrate_1.txt
+!texas_data_winrate_2.txt
 hand*/
+genrate.ckpt*
 
 # Go build output
 go/texas_algorithm
