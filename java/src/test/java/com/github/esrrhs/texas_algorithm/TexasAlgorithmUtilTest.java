@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -28,7 +27,7 @@ public class TexasAlgorithmUtilTest
             dataAvailable = TexasAlgorithmUtil.isLoaded();
         }
 
-        File winRateFile = new File("texas_data_winrate_0.txt");
+        File winRateFile = new File("texas_data_winrate_0.zst");
         if (winRateFile.exists())
         {
             TexasAlgorithmUtil.loadProbility();
@@ -133,8 +132,27 @@ public class TexasAlgorithmUtilTest
     }
 
     @Test
-    @DisplayName("Missing win-rate tables throw instead of crashing")
-    @SuppressWarnings("unchecked")
+    @DisplayName("winrate_3 table matches the on-the-fly enumeration")
+    public void testWinRate3TableMatchesEnumeration()
+    {
+        if (!probDataAvailable)
+        {
+            System.out.println("Skipping testWinRate3TableMatchesEnumeration: prob data files not present");
+            return;
+        }
+
+        float fromTable = TexasAlgorithmUtil.getHandProbability("方3,梅10", "黑2,红4,方7");
+
+        TexasAlgorithmUtil.WinRateTable saved = TexasAlgorithmUtil.winRateMap[3];
+        TexasAlgorithmUtil.winRateMap[3] = null;
+        float fromEnum = TexasAlgorithmUtil.getHandProbability("方3,梅10", "黑2,红4,方7");
+        TexasAlgorithmUtil.winRateMap[3] = saved;
+
+        assertEquals(fromTable, fromEnum, "winrate_3 table should match the enumeration");
+    }
+
+    @Test
+    @DisplayName("Missing win-rate tables fall back to enumeration")
     public void testMissingWinRateTableGraceful()
     {
         if (!dataAvailable)
@@ -143,37 +161,80 @@ public class TexasAlgorithmUtilTest
             return;
         }
 
-        ConcurrentHashMap<Long, TexasAlgorithmUtil.WinRateData>[] saved =
-                (ConcurrentHashMap<Long, TexasAlgorithmUtil.WinRateData>[]) new ConcurrentHashMap[3];
-        for (int i = 0; i < 3; i++)
+        TexasAlgorithmUtil.WinRateTable[] saved = new TexasAlgorithmUtil.WinRateTable[6];
+        for (int i = 0; i < 6; i++)
         {
             saved[i] = TexasAlgorithmUtil.winRateMap[i];
-            TexasAlgorithmUtil.winRateMap[i] = new ConcurrentHashMap<>();
+            TexasAlgorithmUtil.winRateMap[i] = null;
         }
 
         try
         {
-            try
-            {
-                TexasAlgorithmUtil.getHandProbability(Arrays.asList((byte) 0x02, (byte) 0x03),
-                        Collections.emptyList());
-                fail("preflop without winrate_0 should throw");
-            }
-            catch (IllegalArgumentException expected)
-            {
-                // expected
-            }
-
+            // Level 3 is used because its enumeration is ~1M evaluations; the
+            // preflop one would take minutes.
             float p = TexasAlgorithmUtil.getHandProbability(Arrays.asList((byte) 0x02, (byte) 0x03),
                     Arrays.asList((byte) 0x04, (byte) 0x05, (byte) 0x06));
             assertTrue(p > 0 && p < 1, "flop should be enumerated without tables");
+
+            float q = TexasAlgorithmUtil.getHandProbability(Arrays.asList((byte) 0x02, (byte) 0x03),
+                    Arrays.asList((byte) 0x04, (byte) 0x05, (byte) 0x06, (byte) 0x07));
+            assertTrue(q > 0 && q < 1, "turn should be enumerated without tables");
         }
         finally
         {
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 6; i++)
             {
                 TexasAlgorithmUtil.winRateMap[i] = saved[i];
             }
         }
+    }
+
+    @Test
+    @DisplayName("SQLite lookup matches the in-memory table and honors the loaded range")
+    public void testSqliteMatchesEnumeration() throws Exception
+    {
+        File db = new File("texas_data_winrate.db");
+        if (!db.exists())
+        {
+            // The packed database is about 2.3 GiB and is generated locally with
+            // go/cmd/packsqlite, so the test skips when it is absent.
+            System.out.println("Skipping testSqliteMatchesEnumeration: packed database not present");
+            return;
+        }
+
+        TexasAlgorithmUtil.loadSqlite(db, 3, 3);
+        TexasAlgorithmUtil.WinRateTable saved = TexasAlgorithmUtil.winRateMap[3];
+        TexasAlgorithmUtil.winRateMap[3] = null;
+        float fromDb;
+        try
+        {
+            fromDb = TexasAlgorithmUtil.getHandProbability("方3,梅10", "黑2,红4,方7");
+        }
+        finally
+        {
+            TexasAlgorithmUtil.winRateMap[3] = saved;
+        }
+        float fromTable = TexasAlgorithmUtil.getHandProbability("方3,梅10", "黑2,红4,方7");
+        assertEquals(fromTable, fromDb, 1e-9f, "SQLite row should match the in-memory table");
+
+        // Level 3 is outside 0..2, so the lookup must enumerate; the exact
+        // answer still has to equal the table value.
+        TexasAlgorithmUtil.loadSqlite(db, 0, 2);
+        saved = TexasAlgorithmUtil.winRateMap[3];
+        TexasAlgorithmUtil.winRateMap[3] = null;
+        float fromEnum;
+        try
+        {
+            fromEnum = TexasAlgorithmUtil.getHandProbability("方3,梅10", "黑2,红4,方7");
+        }
+        finally
+        {
+            TexasAlgorithmUtil.winRateMap[3] = saved;
+        }
+        assertEquals(fromTable, fromEnum, 1e-9f, "a level outside the SQLite range should enumerate to the same value");
+
+        assertThrows(java.io.IOException.class,
+                () -> TexasAlgorithmUtil.loadSqlite(new File("texas_data_winrate_missing.db"), 0, 5),
+                "a missing database should be rejected");
     }
 }

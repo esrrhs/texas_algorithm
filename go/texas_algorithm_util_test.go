@@ -1,7 +1,8 @@
 package texas_algorithm
 
 import (
-	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -135,27 +136,33 @@ func TestUnloadedProbabilityGraceful(t *testing.T) {
 	}
 }
 
-// TestMissingWinRateTableGraceful checks that a missing exact table is reported
-// as ErrNoProbabilityData while N >= 3 keeps working without any table.
+// TestMissingWinRateTableGraceful checks that a level with no table in memory
+// and no sqlite database falls back to on-the-fly enumeration instead of
+// failing or panicking.
 func TestMissingWinRateTableGraceful(t *testing.T) {
 	if !dataAvailable {
 		t.Skip("data files not present")
 	}
 	saved := WinRateMap
-	WinRateMap = [3]map[int64]*WinRateData{}
+	WinRateMap = [6]*WinRateTable{}
 	defer func() { WinRateMap = saved }()
 
 	hand := []byte{0x02, 0x03}
-	if _, err := GetHandProbability(hand, nil); !errors.Is(err, ErrNoProbabilityData) {
-		t.Errorf("preflop without winrate_0 should return ErrNoProbabilityData, got %v", err)
-	}
-
+	// A flop with no table is enumerated in tens of milliseconds.
 	p, err := GetHandProbability(hand, []byte{0x04, 0x05, 0x06})
 	if err != nil {
 		t.Fatalf("flop should be enumerated without tables: %v", err)
 	}
 	if p <= 0 || p >= 1 {
 		t.Errorf("flop probability out of range: %f", p)
+	}
+
+	p, err = GetHandProbability(hand, []byte{0x04, 0x05, 0x06, 0x07})
+	if err != nil {
+		t.Fatalf("river should be enumerated without tables: %v", err)
+	}
+	if p <= 0 || p >= 1 {
+		t.Errorf("river probability out of range: %f", p)
 	}
 }
 
@@ -296,3 +303,142 @@ func TestWinRateTableMatchesEnumeration(t *testing.T) {
 		t.Errorf("table p = %f, enumeration p = %f", p, want)
 	}
 }
+
+// TestWinRate3TableMatchesEnumeration checks that the n=3 table agrees with the
+// on-the-fly enumeration on a handful of flops. This is the correctness gate
+// for the N <= 3 lookup path.
+func TestWinRate3TableMatchesEnumeration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping TestWinRate3TableMatchesEnumeration in short mode")
+	}
+	if !dataAvailable || WinRateMap[3].Len() == 0 {
+		t.Skip("Skipping TestWinRate3TableMatchesEnumeration: data files not present")
+	}
+	cases := []struct{ hand, pub string }{
+		{"方3,梅10", "黑2,红4,方7"},
+		{"方A,方K", "方Q,红9,梅5"},
+		{"黑2,红7", "梅3,方8,红J"},
+	}
+	for _, c := range cases {
+		hand, err := StrToPokes(c.hand)
+		if err != nil {
+			t.Fatalf("StrToPokes(%q) error: %v", c.hand, err)
+		}
+		pub, err := StrToPokes(c.pub)
+		if err != nil {
+			t.Fatalf("StrToPokes(%q) error: %v", c.pub, err)
+		}
+		p, err := GetHandProbability(hand, pub)
+		if err != nil {
+			t.Fatalf("GetHandProbability error: %v", err)
+		}
+		w, ti, l := EquityExact(hand, pub)
+		want := float32(2*w+ti) / float32(2*(w+ti+l))
+		if p != want {
+			t.Errorf("%s | %s: table p = %f, enumeration p = %f", c.hand, c.pub, p, want)
+		}
+	}
+}
+
+// TestSqliteMatchesEnumeration checks the on-demand database path: a row read
+// from the packed SQLite file must agree with the in-memory table, a level
+// outside the loaded range must enumerate to the same value, and a missing
+// file must be rejected instead of panicking. The database is about 2.3 GiB and
+// is generated locally with cmd/packsqlite, so the test skips when it is absent.
+func TestSqliteMatchesEnumeration(t *testing.T) {
+	dbPath := filepath.Join(dataDir(), "texas_data_winrate.db")
+	if _, err := os.Stat(dbPath); err != nil {
+		t.Skip("Skipping TestSqliteMatchesEnumeration: packed database not present")
+	}
+
+	if err := LoadSqlite(dbPath, 3, 3); err != nil {
+		t.Fatalf("LoadSqlite(%q, 3, 3) error: %v", dbPath, err)
+	}
+	defer closeSqlite()
+
+	saved := WinRateMap[3]
+	defer func() { WinRateMap[3] = saved }()
+
+	WinRateMap[3] = nil
+	fromDB, err := GetHandProbabilityStr("方3,梅10", "黑2,红4,方7")
+	if err != nil {
+		t.Fatalf("sqlite lookup error: %v", err)
+	}
+	WinRateMap[3] = saved
+	fromTable, err := GetHandProbabilityStr("方3,梅10", "黑2,红4,方7")
+	if err != nil {
+		t.Fatalf("table lookup error: %v", err)
+	}
+	if fromDB != fromTable {
+		t.Errorf("sqlite p = %f, table p = %f", fromDB, fromTable)
+	}
+
+	// Level 3 lies outside 0..2, so the lookup must enumerate; the exact answer
+	// still has to match the table value.
+	if err := LoadSqlite(dbPath, 0, 2); err != nil {
+		t.Fatalf("LoadSqlite(%q, 0, 2) error: %v", dbPath, err)
+	}
+	WinRateMap[3] = nil
+	fromEnum, err := GetHandProbabilityStr("方3,梅10", "黑2,红4,方7")
+	if err != nil {
+		t.Fatalf("enumeration fallback error: %v", err)
+	}
+	if fromEnum != fromTable {
+		t.Errorf("level outside the sqlite range: p = %f, table p = %f", fromEnum, fromTable)
+	}
+
+	if err := LoadSqlite(filepath.Join(dataDir(), "texas_data_winrate_missing.db"), 0, 5); err == nil {
+		t.Errorf("LoadSqlite on a missing file should fail")
+	}
+}
+
+// benchCase holds a fixed situation per level so the benchmark measures only
+// the cost of the query, not the construction of the inputs.
+var benchCases = []struct {
+	hand, pub string
+}{
+	{"方3,梅10", ""},
+	{"方3,梅10", "黑2"},
+	{"方3,梅10", "黑2,红4"},
+	{"方3,梅10", "黑2,红4,方7"},
+	{"方3,梅10", "黑2,红4,方7,梅9"},
+	{"方3,梅10", "黑2,红4,方7,梅9,红J"},
+}
+
+// benchGetHandProbability reports the full cost of one GetHandProbability call
+// for the given level. It is used to publish the per-level lookup latency in
+// the README, so it must stay a plain call with no amortisation.
+func benchGetHandProbability(b *testing.B, n int) {
+	if !dataAvailable {
+		b.Skip("data files not present")
+	}
+	hand, err := StrToPokes(benchCases[n].hand)
+	if err != nil {
+		b.Fatal(err)
+	}
+	var pub []byte
+	if benchCases[n].pub != "" {
+		pub, err = StrToPokes(benchCases[n].pub)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+	if n <= 3 {
+		if WinRateMap[n].Len() == 0 {
+			b.Skipf("winrate_%d not loaded", n)
+		}
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := GetHandProbability(hand, pub); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkGetHandProbabilityN0(b *testing.B) { benchGetHandProbability(b, 0) }
+func BenchmarkGetHandProbabilityN1(b *testing.B) { benchGetHandProbability(b, 1) }
+func BenchmarkGetHandProbabilityN2(b *testing.B) { benchGetHandProbability(b, 2) }
+func BenchmarkGetHandProbabilityN3(b *testing.B) { benchGetHandProbability(b, 3) }
+func BenchmarkGetHandProbabilityN4(b *testing.B) { benchGetHandProbability(b, 4) }
+func BenchmarkGetHandProbabilityN5(b *testing.B) { benchGetHandProbability(b, 5) }

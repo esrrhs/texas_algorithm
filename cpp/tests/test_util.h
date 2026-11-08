@@ -83,7 +83,7 @@ namespace txtest
   {
     if (!runnable)
     {
-      std::printf("[ SKIPPED ] %s (data files not present)\n", name);
+      std::printf("[ SKIPPED ] %s (prerequisite not met)\n", name);
       return;
     }
     std::printf("[ RUN     ] %s\n", name);

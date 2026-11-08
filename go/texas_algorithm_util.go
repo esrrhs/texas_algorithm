@@ -2,8 +2,11 @@ package texas_algorithm
 
 import (
 	"bufio"
+	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -12,6 +15,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/klauspost/compress/zstd"
 )
 
 // KeyData is the lookup result of a 7-card hand key. Postion keeps Java's
@@ -29,15 +34,56 @@ var (
 
 	// WinRateMap[n] holds exact "2 hole cards + n known community cards vs
 	// one random opponent" counts, keyed by the suit-canonical card key.
-	// Only n <= 2 is precomputed; n >= 3 is enumerated on the fly.
-	WinRateMap [3]map[int64]*WinRateData
+	// Levels 0-3 are loaded by default. Level 4 and 5 ship with the repository
+	// but stay out of memory unless something asks for them (LoadProbilityAll
+	// or LoadWinRateRange), because decoded they need about 223 MiB and
+	// 1.97 GiB while the enumeration answers a whole query in ~2 ms and ~0.2 ms.
+	WinRateMap [6]*WinRateTable
+
+	// winRateDir is the directory the probability files are read from. It is
+	// written by LoadProbilityLevels so a later LoadWinRateRange call reads the
+	// same place as the startup load.
+	winRateDir = "."
+	winRateMu  sync.Mutex
 )
 
-// WinRateData is the exact win/tie/total count of one canonical situation.
-type WinRateData struct {
-	Win   int64
-	Tie   int64
-	Total int64
+// WinRateTable is one exact-count table: rows sorted by canonical key, plus the
+// constant per-situation enumeration total from the file header. Rows store
+// only win and tie because total is shared by every row.
+type WinRateTable struct {
+	Keys  []int64
+	Win   []uint32
+	Tie   []uint32
+	Total uint32
+}
+
+// Len returns the number of rows, which is also the "loaded" signal: an empty
+// table means the file was missing or unreadable.
+func (t *WinRateTable) Len() int {
+	if t == nil {
+		return 0
+	}
+	return len(t.Keys)
+}
+
+// Get returns the counts of a canonical key by binary search.
+func (t *WinRateTable) Get(key int64) (win, tie, total uint32, ok bool) {
+	if t == nil {
+		return 0, 0, 0, false
+	}
+	lo, hi := 0, len(t.Keys)
+	for lo < hi {
+		mid := int(uint(lo+hi) >> 1)
+		if t.Keys[mid] < key {
+			lo = mid + 1
+		} else {
+			hi = mid
+		}
+	}
+	if lo >= len(t.Keys) || t.Keys[lo] != key {
+		return 0, 0, 0, false
+	}
+	return t.Win[lo], t.Tie[lo], t.Total, true
 }
 
 // Gen generates texas_data.txt if it does not exist yet.
@@ -126,12 +172,12 @@ func IsLoaded() bool {
 	return len(NormalMap) != 0 && len(ColorMap) != 0
 }
 
-// IsProbabilityLoaded reports whether all three exact win-rate tables
-// (texas_data_winrate_0..2.txt) are in memory. Only the N <= 2 lookups depend
-// on them; N >= 3 is enumerated on the fly and works without any table.
+// IsProbabilityLoaded reports whether the exact win-rate tables for 0-3 known
+// community cards are in memory. Only the N <= 3 lookups depend on them; N = 4
+// and 5 are enumerated on the fly and work without any table.
 func IsProbabilityLoaded() bool {
-	for _, m := range WinRateMap {
-		if len(m) == 0 {
+	for _, t := range WinRateMap[:4] {
+		if t.Len() == 0 {
 			return false
 		}
 	}
@@ -175,17 +221,45 @@ func LoadProbility() {
 	LoadProbilityDir(".")
 }
 
-// LoadProbilityDir loads the exact win-rate tables from the given directory.
-// The three tables are independent: a missing texas_data_winrate_N.txt only
-// makes the matching N-card lookup return ErrNoProbabilityData, everything
-// else keeps working.
+// LoadProbilityDir loads the default set of exact win-rate tables (0 to 3 known
+// community cards) from the given directory. The files are zstd-compressed and
+// decompressed transparently on load, so nothing has to be unpacked by hand.
+// The tables are independent: a missing texas_data_winrate_N.zst only makes
+// the matching N-card lookup return ErrNoProbabilityData; everything else keeps
+// working.
+//
+// Levels 4 and 5 are deliberately left out of the default set. Their files ship
+// with the repository, but decoded they need about 223 MiB and 1.97 GiB of
+// resident memory, while the on-the-fly enumeration already answers a level 4
+// query in ~2 ms and a level 5 query in ~0.2 ms. Call LoadProbilityAll or
+// LoadWinRateRange(4, 5) to opt in, or load them from a packed SQLite
+// database with LoadSqlite, which answers them without touching the heap.
 func LoadProbilityDir(dir string) {
+	LoadProbilityLevels(dir, 0, 1, 2, 3)
+}
+
+// LoadProbilityAll loads all six exact win-rate tables, including levels 4 and
+// 5. It is the explicit switch for deployments that prefer the table over the
+// enumeration; expect roughly 223 MiB extra for level 4 and 1.97 GiB for level 5.
+func LoadProbilityAll(dir string) {
+	LoadProbilityLevels(dir, 0, 1, 2, 3, 4, 5)
+}
+
+// LoadProbilityLevels loads the given levels from dir. A missing or corrupt
+// file is reported and skipped, and every other level keeps working.
+func LoadProbilityLevels(dir string, levels ...int) {
 	begin := time.Now().UnixMilli()
 
+	winRateMu.Lock()
+	winRateDir = dir
+	winRateMu.Unlock()
+
 	loaded := 0
-	for i := 0; i <= 2; i++ {
-		err := LoadWinRateFile(i, filepath.Join(dir, "texas_data_winrate_"+strconv.Itoa(i)+".txt"))
-		if err != nil {
+	for _, n := range levels {
+		if n < 0 || n >= len(WinRateMap) {
+			continue
+		}
+		if err := LoadWinRateFile(n, filepath.Join(dir, winRateFileName(n))); err != nil {
 			fmt.Println(err)
 			continue
 		}
@@ -195,49 +269,306 @@ func LoadProbilityDir(dir string) {
 	fmt.Println("load time", time.Now().UnixMilli()-begin, "tables", loaded)
 }
 
-// LoadWinRateFile loads one exact win-rate table: "<key> <win> <tie> <total>".
+// winRateFileName is the runtime file of level n: one zstd-compressed file per
+// level, matching the opt_2..opt_6 layout of the original tables.
+func winRateFileName(n int) string {
+	return "texas_data_winrate_" + strconv.Itoa(n) + ".zst"
+}
+
+// winRateMagic is the payload magic of the runtime win-rate files.
+const winRateMagic = "TXV1"
+
+// maxWinRateRows is a sanity bound on the row count, about 1.6x the level 5
+// table, so a corrupt header cannot ask for an absurd allocation.
+const maxWinRateRows = 200_000_000
+
+// LoadWinRateFile loads one exact win-rate table from its zstd-compressed
+// runtime file. The payload is columnar:
+//
+//	"TXV1" (4) | n (1) | reserved (3) | rows (u64 LE) | total (u64 LE)
+//	rows x uvarint   key delta against the previous row
+//	rows x uvarint   win count
+//	rows x uvarint   tie count
+//
+// `total` is the same for every row of a level: the generator derives it from
+// the orbit size and the per-hand enumeration count, so it is stored once in
+// the header, and loss = total - win - tie is never written. Keys are strictly
+// increasing after delta decoding, so the three columns become three parallel
+// arrays that are binary searched.
+//
+// The zstd stream is decoded incrementally, so the 487 MB decompressed payload
+// of level 5 never has to sit in memory on top of the decoded arrays.
 func LoadWinRateFile(n int, path string) error {
-	in, err := os.Open(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-	defer in.Close()
-	m := make(map[int64]*WinRateData, 1<<10)
-	scanner := bufio.NewScanner(in)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-	for scanner.Scan() {
-		params := strings.Fields(scanner.Text())
-		if len(params) < 4 {
-			continue
-		}
-		key, err := strconv.ParseInt(params[0], 10, 64)
-		if err != nil {
-			return err
-		}
-		w, err := strconv.ParseInt(params[1], 10, 64)
-		if err != nil {
-			return err
-		}
-		t, err := strconv.ParseInt(params[2], 10, 64)
-		if err != nil {
-			return err
-		}
-		total, err := strconv.ParseInt(params[3], 10, 64)
-		if err != nil {
-			return err
-		}
-		m[key] = &WinRateData{Win: w, Tie: t, Total: total}
-	}
-	if err := scanner.Err(); err != nil {
+	defer f.Close()
+
+	dec, err := zstd.NewReader(f,
+		zstd.WithDecoderConcurrency(1),
+		zstd.WithDecoderMaxWindow(64<<20),
+	)
+	if err != nil {
 		return err
 	}
-	WinRateMap[n] = m
+	defer dec.Close()
+
+	in := newStreamReader(dec, 1<<17)
+
+	var hdr [24]byte
+	if err := in.readFull(hdr[:]); err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
+	if string(hdr[0:4]) != winRateMagic {
+		return fmt.Errorf("%s: bad magic %q", path, string(hdr[0:4]))
+	}
+	if int(hdr[4]) != n {
+		return fmt.Errorf("%s: file holds level %d, expected %d", path, hdr[4], n)
+	}
+	rows := binary.LittleEndian.Uint64(hdr[8:16])
+	total := binary.LittleEndian.Uint64(hdr[16:24])
+	if total == 0 || total > math.MaxUint32 {
+		return fmt.Errorf("%s: total %d does not fit the uint32 rows", path, total)
+	}
+	if rows == 0 || rows > maxWinRateRows {
+		return fmt.Errorf("%s: implausible row count %d", path, rows)
+	}
+	// total is derived from the orbit size, never stored per row; the header
+	// value is only a cross check against the formula the generator uses.
+	if total != uint64(winRateTotal(n)) {
+		return fmt.Errorf("%s: total %d does not match the derived %d", path, total, winRateTotal(n))
+	}
+
+	t := &WinRateTable{
+		Keys:  make([]int64, rows),
+		Win:   make([]uint32, rows),
+		Tie:   make([]uint32, rows),
+		Total: uint32(total),
+	}
+
+	// The payload is columnar: every key delta first, then every win, then
+	// every tie, so the three loops below each read one homogeneous stream.
+	var prev int64
+	for i := uint64(0); i < rows; i++ {
+		gap, err := in.uvarint()
+		if err != nil {
+			return fmt.Errorf("%s: row %d key: %w", path, i, err)
+		}
+		key := prev + int64(gap)
+		if key <= prev {
+			return fmt.Errorf("%s: row %d key %d is not increasing", path, i, key)
+		}
+		t.Keys[i] = key
+		prev = key
+	}
+	for i := uint64(0); i < rows; i++ {
+		w, err := in.uvarint()
+		if err != nil {
+			return fmt.Errorf("%s: row %d win: %w", path, i, err)
+		}
+		if w > total {
+			return fmt.Errorf("%s: row %d win %d above total %d", path, i, w, total)
+		}
+		t.Win[i] = uint32(w)
+	}
+	for i := uint64(0); i < rows; i++ {
+		ti, err := in.uvarint()
+		if err != nil {
+			return fmt.Errorf("%s: row %d tie: %w", path, i, err)
+		}
+		if uint64(t.Win[i])+ti > total {
+			return fmt.Errorf("%s: row %d has win+tie=%d above total %d", path, i, uint64(t.Win[i])+ti, total)
+		}
+		t.Tie[i] = uint32(ti)
+	}
+
+	WinRateMap[n] = t
+	return nil
+}
+
+// WinRateCount is the row count reported by CountWinRateFile.
+type WinRateCount struct {
+	Rows  uint64
+	Total uint64
+}
+
+// CountWinRateFile decodes one packed table from the first key to the last and
+// reports how many rows it holds. It is the streaming counterpart of
+// LoadWinRateFile: the header and the three columns are validated the same way,
+// but no arrays are allocated and WinRateMap is left untouched, so counting
+// level 5 costs a few megabytes instead of about 1.9 GiB.
+func CountWinRateFile(n int, path string) (WinRateCount, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return WinRateCount{}, err
+	}
+	defer f.Close()
+
+	dec, err := zstd.NewReader(f,
+		zstd.WithDecoderConcurrency(1),
+		zstd.WithDecoderMaxWindow(64<<20),
+	)
+	if err != nil {
+		return WinRateCount{}, err
+	}
+	defer dec.Close()
+
+	in := newStreamReader(dec, 1<<17)
+
+	var hdr [24]byte
+	if err := in.readFull(hdr[:]); err != nil {
+		return WinRateCount{}, fmt.Errorf("%s: %w", path, err)
+	}
+	if string(hdr[0:4]) != winRateMagic {
+		return WinRateCount{}, fmt.Errorf("%s: bad magic %q", path, string(hdr[0:4]))
+	}
+	if int(hdr[4]) != n {
+		return WinRateCount{}, fmt.Errorf("%s: file holds level %d, expected %d", path, hdr[4], n)
+	}
+	rows := binary.LittleEndian.Uint64(hdr[8:16])
+	total := binary.LittleEndian.Uint64(hdr[16:24])
+	if total == 0 || total > math.MaxUint32 {
+		return WinRateCount{}, fmt.Errorf("%s: total %d does not fit the uint32 rows", path, total)
+	}
+	if rows == 0 || rows > maxWinRateRows {
+		return WinRateCount{}, fmt.Errorf("%s: implausible row count %d", path, rows)
+	}
+	if total != uint64(winRateTotal(n)) {
+		return WinRateCount{}, fmt.Errorf("%s: total %d does not match the derived %d", path, total, winRateTotal(n))
+	}
+
+	// Same column layout as LoadWinRateFile: key deltas, then wins, then ties.
+	// Keys must strictly increase and every count must fit inside total; only
+	// the running key is kept.
+	var prev int64
+	for i := uint64(0); i < rows; i++ {
+		gap, err := in.uvarint()
+		if err != nil {
+			return WinRateCount{}, fmt.Errorf("%s: row %d key: %w", path, i, err)
+		}
+		key := prev + int64(gap)
+		if key <= prev {
+			return WinRateCount{}, fmt.Errorf("%s: row %d key %d is not increasing", path, i, key)
+		}
+		prev = key
+	}
+	for i := uint64(0); i < rows; i++ {
+		c, err := in.uvarint()
+		if err != nil {
+			return WinRateCount{}, fmt.Errorf("%s: row %d win: %w", path, i, err)
+		}
+		if c > total {
+			return WinRateCount{}, fmt.Errorf("%s: row %d win %d above total %d", path, i, c, total)
+		}
+	}
+	for i := uint64(0); i < rows; i++ {
+		c, err := in.uvarint()
+		if err != nil {
+			return WinRateCount{}, fmt.Errorf("%s: row %d tie: %w", path, i, err)
+		}
+		if c > total {
+			return WinRateCount{}, fmt.Errorf("%s: row %d tie %d above total %d", path, i, c, total)
+		}
+	}
+	return WinRateCount{Rows: rows, Total: total}, nil
+}
+
+// errVarintOverflow is returned when a uvarint does not fit 64 bits.
+var errVarintOverflow = errors.New("varint overflows uint64")
+
+// streamReader buffers a decompression stream and decodes uvarints straight
+// out of the buffer. encoding/binary.ReadUvarint would route every byte
+// through an interface call, which is far too slow for the 123M-row level 5.
+type streamReader struct {
+	src io.Reader
+	buf []byte
+	pos int
+	end int
+}
+
+func newStreamReader(src io.Reader, size int) *streamReader {
+	return &streamReader{src: src, buf: make([]byte, size)}
+}
+
+// fill refills the buffer, tolerating readers that return (0, nil).
+func (r *streamReader) fill() error {
+	for {
+		n, err := r.src.Read(r.buf)
+		if n > 0 {
+			r.pos, r.end = 0, n
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+	}
+}
+
+func (r *streamReader) readFull(dst []byte) error {
+	for len(dst) > 0 {
+		if r.pos == r.end {
+			if err := r.fill(); err != nil {
+				return err
+			}
+		}
+		n := copy(dst, r.buf[r.pos:r.end])
+		r.pos += n
+		dst = dst[n:]
+	}
+	return nil
+}
+
+func (r *streamReader) uvarint() (uint64, error) {
+	var v uint64
+	for shift := uint(0); ; shift += 7 {
+		if r.pos == r.end {
+			if err := r.fill(); err != nil {
+				return 0, err
+			}
+		}
+		c := r.buf[r.pos]
+		r.pos++
+		if c < 0x80 {
+			if shift == 63 && c > 1 {
+				return 0, errVarintOverflow
+			}
+			return v | uint64(c)<<shift, nil
+		}
+		if shift >= 63 {
+			return 0, errVarintOverflow
+		}
+		v |= uint64(c&0x7f) << shift
+	}
+}
+
+// LoadWinRateRange loads levels from..to (inclusive) of the exact win-rate
+// tables into memory, from the directory last given to LoadProbilityLevels
+// (current directory by default). LoadWinRateRange(0, 5) is the "everything in
+// memory" mode: about 2.2 GiB of resident memory for all six levels.
+func LoadWinRateRange(from, to int) error {
+	return LoadWinRateRangeDir(winRateDir, from, to)
+}
+
+// LoadWinRateRangeDir is LoadWinRateRange with an explicit directory.
+func LoadWinRateRangeDir(dir string, from, to int) error {
+	if from < 0 {
+		from = 0
+	}
+	if to >= len(WinRateMap) {
+		to = len(WinRateMap) - 1
+	}
+	for n := from; n <= to; n++ {
+		if err := LoadWinRateFile(n, filepath.Join(dir, winRateFileName(n))); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 // IsWinRateLoaded reports whether the exact win-rate tables are loaded.
 func IsWinRateLoaded() bool {
-	return len(WinRateMap[0]) != 0
+	return WinRateMap[0].Len() != 0
 }
 
 func loadKeyFile(path string, color bool) error {
@@ -823,10 +1154,16 @@ func GetHandProbabilityKeyPub(hand, pub int64) (float32, error) {
 // plus 0-5 community cards against one random opponent hand. Ties count as
 // half a win: P = (W + 0.5*T) / (W + T + L).
 //
-// n community cards below 3 are answered from the precomputed exact tables
-// (texas_data_winrate_0..2.txt, keyed by the suit-canonical card key). Three
-// or more community cards are enumerated on the fly, comparing the Index of
-// the new strength tables instead of re-evaluating hands.
+// The answer comes from the first source available for the level:
+//
+//  1. the in-memory exact table, when LoadWinRateRange loaded that level;
+//  2. the packed sqlite database, when LoadSqlite opened one covering it;
+//  3. on-the-fly enumeration, comparing the Index of the strength tables
+//     instead of re-evaluating hands.
+//
+// Levels 0-3 are loaded into memory by default (LoadProbilityDir); levels 4 and
+// 5 are not, because decoded they need ~223 MiB and ~1.97 GiB of resident
+// memory, while the enumeration answers them in ~2 ms and ~0.2 ms.
 func GetHandProbability(hand, pub []byte) (float32, error) {
 	if err := CheckPokes(hand); err != nil {
 		return 0, err
@@ -837,24 +1174,50 @@ func GetHandProbability(hand, pub []byte) (float32, error) {
 	if len(hand) != 2 || len(pub) > 5 {
 		return 0, ErrNoProbabilityData
 	}
-	if len(pub) >= 3 {
-		win, tie, loss := EquityExact(hand, pub)
-		total := win + tie + loss
-		if total == 0 {
-			return 0, ErrNoProbabilityData
+
+	win, tie, total, ok := exactCounts(hand, pub)
+	if !ok || total == 0 {
+		return 0, ErrNoProbabilityData
+	}
+	return float32((2*float64(win) + float64(tie)) / (2 * float64(total))), nil
+}
+
+// exactCounts answers (win, tie, total) for a situation from the first
+// available source: the in-memory table, the sqlite database, enumeration.
+func exactCounts(hand, pub []byte) (win, tie, total uint64, ok bool) {
+	n := len(pub)
+	if t := WinRateMap[n]; t.Len() != 0 {
+		cards := append(append([]byte{}, hand...), pub...)
+		w, ti, tot, found := t.Get(CanonKey(cards, len(hand)))
+		if !found {
+			return 0, 0, 0, false
 		}
-		return float32((2*float64(win) + float64(tie)) / (2 * float64(total))), nil
+		return uint64(w), uint64(ti), uint64(tot), true
 	}
-	m := WinRateMap[len(pub)]
-	if len(m) == 0 {
-		return 0, ErrNoProbabilityData
+	if w, ti, found := sqliteCounts(n, hand, pub); found {
+		return uint64(w), uint64(ti), uint64(winRateTotal(n)), true
 	}
-	cards := append(append([]byte{}, hand...), pub...)
-	data := m[CanonKey(cards, len(hand))]
-	if data == nil || data.Total == 0 {
-		return 0, ErrNoProbabilityData
+	w, ti, l := EquityExact(hand, pub)
+	if w+ti+l == 0 {
+		return 0, 0, 0, false
 	}
-	return float32((2*float64(data.Win) + float64(data.Tie)) / (2 * float64(data.Total))), nil
+	return uint64(w), uint64(ti), uint64(w + ti + l), true
+}
+
+// winRateTotal returns the constant enumeration total of level n. It is the
+// orbit size times the 990 opponent pairs: after 2 hole cards and n community
+// cards, the remaining 5-n board cards can be completed in C(50-n, 5-n) ways.
+// The generator uses the same formula, so the table header is only a cross
+// check; the sqlite rows do not have to store it at all.
+func winRateTotal(n int) uint32 {
+	if n < 0 || n > 5 {
+		return 0
+	}
+	c := uint64(1)
+	for i := 0; i < 5-n; i++ {
+		c = c * uint64(50-n-i) / uint64(i+1)
+	}
+	return uint32(c * 990)
 }
 
 // deck52 returns the 52 card bytes in ascending order.

@@ -43,6 +43,23 @@
     </properties>
 
     <dependencies>
+        <!-- Pure Java zstd decoder: no JNI, no native library per platform, so
+             the jar stays portable and CI needs no extra setup. -->
+        <dependency>
+            <groupId>io.airlift</groupId>
+            <artifactId>aircompressor</artifactId>
+            <version>0.27</version>
+        </dependency>
+        <!-- SQLite JDBC for the on-demand packed-database mode. It bundles the
+             native SQLite library for every supported platform, so the jar grows
+             by about 14 MB, but "clone and build" still needs nothing installed:
+             only the Maven dependency has to be downloaded once (CI can use the
+             default Maven Central mirror or a local repository cache). -->
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <version>3.45.3.0</version>
+        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -69,6 +86,9 @@
                 <version>3.2.5</version>
                 <configuration>
                     <argLine>-Xmx2048m -Dfile.encoding=UTF-8</argLine>
+                    <!-- The data tables are committed once at the repo root, not
+                         copied per language, so the tests read them from there. -->
+                    <workingDirectory>${project.basedir}/..</workingDirectory>
                 </configuration>
             </plugin>
         </plugins>

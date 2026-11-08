@@ -19,23 +19,69 @@ namespace texas_algorithm
     int type = 0;
   };
 
-  // WinRateData is the exact win/tie/total count of one suit-canonical
-  // situation ("2 hole cards + n public cards vs one random opponent").
-  struct WinRateData
+  // WinRateTable is one exact-count table: keys sorted ascending, with the
+  // constant per-situation enumeration total held once in the header. Rows
+  // store only win and tie because total is shared by every row.
+  class WinRateTable
   {
-    int64_t win = 0;
-    int64_t tie = 0;
-    int64_t total = 0;
+  public:
+    std::vector<int64_t> keys;
+    std::vector<uint32_t> win;
+    std::vector<uint32_t> tie;
+    uint32_t total = 0;
+
+    size_t size() const { return keys.size(); }
+
+    // Find returns the row of a canonical key, or false when absent.
+    bool Find(int64_t key, uint32_t &winOut, uint32_t &tieOut, uint32_t &totalOut) const;
   };
 
   extern std::unordered_map<int64_t, KeyData> ColorMap;
   extern std::unordered_map<int64_t, KeyData> NormalMap;
 
-  // WinRateMap[n] holds the exact counts for n = 0..2 public cards.
-  extern std::unordered_map<int64_t, WinRateData> WinRateMap[3];
+  // WinRateMap[n] holds the exact counts for n known public cards. Entries 0..3
+  // are loaded by default. Levels 4 and 5 ship with the repository as zstd
+  // files but stay out of memory unless LoadProbilityAll or LoadWinRateRange
+  // asks for them: decoded they need about 223 MiB and 1.97 GiB, while the
+  // enumeration answers a level 4 query in ~2 ms and a level 5 query in ~0.2 ms.
+  extern WinRateTable WinRateMap[6];
 
-  // LoadWinRateFile loads one exact win-rate file: "<key> <win> <tie> <total>".
+  // LoadWinRateFile loads one exact win-rate table from its zstd-compressed
+  // runtime file, decompressed transparently while reading.
   bool LoadWinRateFile(int n, const std::string &path);
+
+  // LoadWinRateRange loads levels from..to (inclusive) of the exact win-rate
+  // tables into memory, from the directory last passed to LoadProbilityDir
+  // (the current directory by default). LoadWinRateRange(0, 5) is the "all in
+  // memory" mode. A level that fails to load leaves the others untouched.
+  void LoadWinRateRange(int from, int to);
+
+  // LoadWinRateRangeDir is LoadWinRateRange with an explicit directory.
+  void LoadWinRateRangeDir(const std::string &dir, int from, int to);
+
+  // LoadSqlite opens the packed win-rate database produced by cmd/packsqlite
+  // and answers levels from..to from it. Rows stay on disk: each query is a
+  // primary-key descent of a WITHOUT ROWID table, so only the page cache is
+  // resident. Levels outside from..to are ignored. A missing table inside the
+  // range simply falls back to enumeration. Returns false when the database
+  // cannot be opened or no table could be prepared.
+  //
+  // SQLite support is a build option (CMake TEXAS_SQLITE, default auto). A
+  // build compiled without it still links: LoadSqlite then prints an
+  // explanatory message and returns false, and every level falls back to
+  // enumeration. IsSqliteSupported() reports which build this is.
+  //
+  // The in-memory table always wins over the database, so the two can
+  // coexist: LoadWinRateRange(0, 2) plus LoadSqlite(db, 0, 5) reads 0-2 from
+  // memory and 3-5 from the database.
+  bool LoadSqlite(const std::string &path, int from, int to);
+
+  // IsSqliteSupported reports whether this build includes SQLite support.
+  bool IsSqliteSupported();
+
+  // LoadProbilityAll loads all six levels, including the 4 and 5 tables that
+  // the default startup deliberately leaves out.
+  void LoadProbilityAll(const std::string &dir);
 
   // IsWinRateLoaded reports whether the exact win-rate tables are loaded.
   bool IsWinRateLoaded();
@@ -191,8 +237,9 @@ namespace texas_algorithm
 
   // GetHandProbability returns the exact 1v1 win probability of 2 hole cards
   // plus 0-5 community cards against one random opponent hand. Ties count as
-  // half a win: P = (W + 0.5*T) / (W + T + L). n <= 2 public cards are read
-  // from the exact tables; otherwise the equity is enumerated on the fly.
+  // half a win: P = (W + 0.5*T) / (W + T + L). The answer comes from the first
+  // source available for that level: the in-memory table, the packed SQLite
+  // database opened by LoadSqlite, then on-the-fly enumeration.
   float GetHandProbability(const std::vector<int> &hand, const std::vector<int> &pub);
   float GetHandProbabilityStr(const std::string &hand, const std::string &pub);
 

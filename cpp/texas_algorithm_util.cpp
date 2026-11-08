@@ -1,11 +1,14 @@
 #include "texas_algorithm_util.h"
 
 #include <algorithm>
+#include <cstring>
 #include <array>
+#include <cstdio>
 #include <ctime>
 #include <fstream>
 #include <functional>
 #include <iostream>
+#include <mutex>
 #include <sstream>
 #include <stdexcept>
 #include <thread>
@@ -18,6 +21,22 @@
 #include "gen_trans_util.h"
 #include "gen_util.h"
 #include "texas_card_util.h"
+
+// Vendored decompression-only build of zstd, so users never need a system
+// libzstd: third_party/zstd/zstddeclib.c is compiled straight into the library.
+#include "third_party/zstd/zstd.h"
+
+// SQLite support is optional and chosen by the CMake option TEXAS_SQLITE.
+// When enabled, <sqlite3.h> comes either from a system package or from the
+// pinned amalgamation CMake downloaded into the build tree. When disabled the
+// header is never referenced and LoadSqlite just reports the missing feature.
+#ifndef TEXAS_HAVE_SQLITE
+#define TEXAS_HAVE_SQLITE 0
+#endif
+
+#if TEXAS_HAVE_SQLITE
+#include <sqlite3.h>
+#endif
 
 namespace texas_algorithm
 {
@@ -204,9 +223,9 @@ namespace texas_algorithm
 
   bool IsProbabilityLoaded()
   {
-    for (const auto &m : WinRateMap)
+    for (int i = 0; i <= 3; i++)
     {
-      if (m.empty())
+      if (WinRateMap[i].size() == 0)
       {
         return false;
       }
@@ -239,17 +258,60 @@ namespace texas_algorithm
 
   void LoadProbility() { LoadProbilityDir("."); }
 
-  // LoadProbilityDir loads the exact win-rate tables from dir. The three
-  // tables are independent: a missing texas_data_winrate_N.txt only makes the
-  // matching N-card lookup throw, everything else keeps working.
+  namespace
+  {
+    // winRateDir remembers where the files were loaded from, so a later
+    // LoadWinRateRange(4, 5) reads the same directory as the startup load.
+    std::string g_winRateDir = ".";
+  }
+
+  // LoadProbilityDir loads the default set of exact win-rate tables (levels 0
+  // to 3) from dir. The six tables are independent: a missing
+  // texas_data_winrate_N.zst only makes the matching N-card lookup fall back to
+  // enumeration, everything else keeps working. Files are zstd-compressed and
+  // decompressed transparently here, so nothing has to be unpacked by hand.
+  //
+  // Levels 4 and 5 are deliberately left out of the default set: their files
+  // ship with the repository, but decoded they need about 223 MiB and 1.97 GiB
+  // of resident memory, while the on-the-fly enumeration already answers a
+  // level 4 query in ~2 ms and a level 5 query in ~0.2 ms. Call
+  // LoadProbilityAll or LoadWinRateRange to opt in.
   void LoadProbilityDir(const std::string &dir)
+  {
+    LoadWinRateRangeDir(dir, 0, 3);
+  }
+
+  // LoadProbilityAll loads all six exact win-rate tables, including levels 4
+  // and 5. It is the explicit switch for deployments that prefer the table over
+  // the enumeration; expect roughly 223 MiB extra for level 4 and 1.97 GiB for
+  // level 5.
+  void LoadProbilityAll(const std::string &dir)
+  {
+    LoadWinRateRangeDir(dir, 0, 5);
+  }
+
+  void LoadWinRateRange(int from, int to)
+  {
+    LoadWinRateRangeDir(g_winRateDir, from, to);
+  }
+
+  void LoadWinRateRangeDir(const std::string &dir, int from, int to)
   {
     int64_t begin = NowMillis();
 
-    int loaded = 0;
-    for (int i = 0; i <= 2; i++)
+    g_winRateDir = dir.empty() ? "." : dir;
+    if (from < 0)
     {
-      std::string name = "texas_data_winrate_" + std::to_string(i) + ".txt";
+      from = 0;
+    }
+    if (to > 5)
+    {
+      to = 5;
+    }
+    int loaded = 0;
+    for (int i = from; i <= to; i++)
+    {
+      std::string name = "texas_data_winrate_" + std::to_string(i) + ".zst";
       std::string path = dir.empty() ? name : dir + "/" + name;
       if (LoadWinRateFile(i, path))
       {
@@ -260,37 +322,404 @@ namespace texas_algorithm
     std::cout << "load time " << NowMillis() - begin << " tables " << loaded << std::endl;
   }
 
-  std::unordered_map<int64_t, WinRateData> WinRateMap[3];
+  namespace
+  {
+#if TEXAS_HAVE_SQLITE
+    // The packed database is immutable, so all lookups share one read-only
+    // connection and one prepared statement per level. g_sqliteMu guards the
+    // handle set and serialises statement use: a single connection must not run
+    // two statements at the same time even when SQLite is built thread-safe.
+    std::mutex g_sqliteMu;
+    sqlite3 *g_sqliteDb = nullptr;
+    sqlite3_stmt *g_sqliteStmts[6] = {};
+    int g_sqliteFrom = 0;
+    int g_sqliteTo = -1;
 
+    void CloseSqliteLocked()
+    {
+      for (sqlite3_stmt *&st : g_sqliteStmts)
+      {
+        if (st != nullptr)
+        {
+          sqlite3_finalize(st);
+          st = nullptr;
+        }
+      }
+      if (g_sqliteDb != nullptr)
+      {
+        sqlite3_close(g_sqliteDb);
+        g_sqliteDb = nullptr;
+      }
+      g_sqliteFrom = 0;
+      g_sqliteTo = -1;
+    }
+#endif
+  }
+
+#if TEXAS_HAVE_SQLITE
+  bool LoadSqlite(const std::string &path, int from, int to)
+  {
+    if (from < 0)
+    {
+      from = 0;
+    }
+    if (to > 5)
+    {
+      to = 5;
+    }
+    if (from > to)
+    {
+      std::cout << "LoadSqlite: empty level range " << from << ".." << to << std::endl;
+      return false;
+    }
+
+    sqlite3 *db = nullptr;
+    int rc = sqlite3_open_v2(path.c_str(), &db, SQLITE_OPEN_READONLY, nullptr);
+    if (rc != SQLITE_OK)
+    {
+      std::cout << "LoadSqlite " << path << ": " << (db ? sqlite3_errmsg(db) : "cannot open") << std::endl;
+      sqlite3_close(db);
+      return false;
+    }
+    // The packer always writes a plain rollback-mode database; make sure the
+    // connection never tries to create a journal or a WAL beside it, because
+    // the file may live on a read-only mount.
+    sqlite3_exec(db, "PRAGMA query_only=1", nullptr, nullptr, nullptr);
+
+    sqlite3_stmt *stmts[6] = {};
+    int prepared = 0;
+    for (int n = from; n <= to; n++)
+    {
+      std::string sql = "SELECT w, t FROM w" + std::to_string(n) + " WHERE k = ?";
+      if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmts[n], nullptr) != SQLITE_OK)
+      {
+        // A level with no table in the packed file simply stays on the
+        // enumeration path.
+        sqlite3_finalize(stmts[n]);
+        stmts[n] = nullptr;
+        continue;
+      }
+      prepared++;
+    }
+    if (prepared == 0)
+    {
+      std::cout << "LoadSqlite " << path << ": no win-rate table in levels " << from << ".." << to << std::endl;
+      sqlite3_close(db);
+      return false;
+    }
+
+    std::lock_guard<std::mutex> lock(g_sqliteMu);
+    CloseSqliteLocked();
+    g_sqliteDb = db;
+    for (int n = 0; n < 6; n++)
+    {
+      g_sqliteStmts[n] = stmts[n];
+    }
+    g_sqliteFrom = from;
+    g_sqliteTo = to;
+    return true;
+  }
+#else
+  bool LoadSqlite(const std::string &, int, int)
+  {
+    std::cerr << "LoadSqlite: 本构建未启用 SQLite 支持，请用 -DTEXAS_SQLITE=fetch 重新配置"
+              << std::endl;
+    return false;
+  }
+#endif
+
+  bool IsSqliteSupported()
+  {
+    return TEXAS_HAVE_SQLITE != 0;
+  }
+
+  WinRateTable WinRateMap[6];
+
+  // WinRateTotal returns the constant enumeration total of level n: the orbit
+  // size times the 990 opponent pairs. After 2 hole cards and n community
+  // cards, the remaining 5-n board cards can be completed in C(50-n, 5-n) ways.
+  // The generator uses the same formula, so the file header is only a cross
+  // check; the rows never have to store it.
+  namespace
+  {
+    uint32_t WinRateTotal(int n)
+    {
+      if (n < 0 || n > 5)
+      {
+        return 0;
+      }
+      uint64_t c = 1;
+      for (int i = 0; i < 5 - n; i++)
+      {
+        c = c * (uint64_t)(50 - n - i) / (uint64_t)(i + 1);
+      }
+      return (uint32_t)(c * 990);
+    }
+
+#if TEXAS_HAVE_SQLITE
+    // SqliteCounts answers (win, tie) of a situation from the packed database.
+    // Returns false when no database is open, the level is outside the loaded
+    // range, the table is missing, or the key is absent; the caller then falls
+    // back to enumeration.
+    bool SqliteCounts(int n, const std::vector<int> &cards, int nHole,
+                      uint32_t &winOut, uint32_t &tieOut)
+    {
+      std::lock_guard<std::mutex> lock(g_sqliteMu);
+      if (g_sqliteDb == nullptr || n < g_sqliteFrom || n > g_sqliteTo || g_sqliteStmts[n] == nullptr)
+      {
+        return false;
+      }
+      sqlite3_stmt *st = g_sqliteStmts[n];
+      sqlite3_bind_int64(st, 1, CanonKey(cards, nHole));
+      bool found = sqlite3_step(st) == SQLITE_ROW;
+      if (found)
+      {
+        winOut = (uint32_t)sqlite3_column_int64(st, 0);
+        tieOut = (uint32_t)sqlite3_column_int64(st, 1);
+      }
+      sqlite3_reset(st);
+      return found;
+    }
+#endif
+  }
+
+  bool WinRateTable::Find(int64_t key, uint32_t &winOut, uint32_t &tieOut, uint32_t &totalOut) const
+  {
+    auto it = std::lower_bound(keys.begin(), keys.end(), key);
+    if (it == keys.end() || *it != key)
+    {
+      return false;
+    }
+    size_t i = (size_t)(it - keys.begin());
+    winOut = win[i];
+    tieOut = tie[i];
+    totalOut = total;
+    return true;
+  }
+
+  namespace
+  {
+    // ZstdReader decodes a zstd frame incrementally and hands out varints and
+    // raw bytes. Streaming matters: level 5 decompresses to 487 MB, which must
+    // not sit in memory on top of the 1.97 GB decoded table.
+    class ZstdReader
+    {
+    public:
+      explicit ZstdReader(FILE *f) : f_(f), ds_(ZSTD_createDStream())
+      {
+        if (ds_ == nullptr)
+        {
+          throw std::runtime_error("zstd: cannot create decompression stream");
+        }
+        ZSTD_initDStream(ds_);
+      }
+
+      ~ZstdReader()
+      {
+        if (ds_ != nullptr)
+        {
+          ZSTD_freeDStream(ds_);
+        }
+      }
+
+      bool ReadByte(uint8_t &b)
+      {
+        if (pos_ == len_ && !Fill())
+        {
+          return false;
+        }
+        b = buf_[pos_++];
+        return true;
+      }
+
+      bool ReadBytes(void *dst, size_t n)
+      {
+        uint8_t *out = static_cast<uint8_t *>(dst);
+        for (size_t i = 0; i < n; i++)
+        {
+          if (!ReadByte(out[i]))
+          {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      bool ReadUvarint(uint64_t &v)
+      {
+        v = 0;
+        for (uint64_t shift = 0; shift < 64; shift += 7)
+        {
+          uint8_t b;
+          if (!ReadByte(b))
+          {
+            return false;
+          }
+          v |= (uint64_t)(b & 0x7f) << shift;
+          if ((b & 0x80) == 0)
+          {
+            return true;
+          }
+        }
+        return false;
+      }
+
+    private:
+      bool Fill()
+      {
+        while (true)
+        {
+          if (in_.pos == in_.size && !eof_)
+          {
+            size_t n = std::fread(inbuf_, 1, sizeof(inbuf_), f_);
+            if (n == 0)
+            {
+              eof_ = true;
+            }
+            in_.src = inbuf_;
+            in_.size = n;
+            in_.pos = 0;
+            if (n == 0)
+            {
+              return false;
+            }
+          }
+          ZSTD_outBuffer out = {buf_, sizeof(buf_), 0};
+          size_t ret = ZSTD_decompressStream(ds_, &out, &in_);
+          if (ZSTD_isError(ret))
+          {
+            return false;
+          }
+          if (out.pos > 0)
+          {
+            pos_ = 0;
+            len_ = out.pos;
+            return true;
+          }
+          if (eof_ && in_.pos == in_.size)
+          {
+            return false;
+          }
+        }
+      }
+
+      FILE *f_;
+      ZSTD_DStream *ds_;
+      uint8_t inbuf_[1 << 17];
+      uint8_t buf_[1 << 16];
+      ZSTD_inBuffer in_ = {nullptr, 0, 0};
+      size_t pos_ = 0;
+      size_t len_ = 0;
+      bool eof_ = false;
+    };
+  }
+
+  // LoadWinRateFile loads one exact win-rate table from its zstd runtime file.
+  // The payload is columnar:
+  //
+  //   "TXV1" (4) | n (1) | reserved (3) | rows (u64 LE) | total (u64 LE)
+  //   rows x uvarint   key delta against the previous row
+  //   rows x uvarint   win count
+  //   rows x uvarint   tie count
+  //
+  // total is the same for every row of a level (orbit size x 990 opponent
+  // pairs), so it is stored once in the header, and loss = total - win - tie is
+  // never written. Keys are strictly increasing after delta decoding, so the
+  // three columns become three parallel arrays that are binary searched.
   bool LoadWinRateFile(int n, const std::string &path)
   {
-    std::ifstream in(path, std::ios::binary);
-    if (!in.is_open())
+    FILE *f = std::fopen(path.c_str(), "rb");
+    if (f == nullptr)
     {
       std::cout << "open " << path << ": no such file or directory" << std::endl;
       return false;
     }
-    std::unordered_map<int64_t, WinRateData> m;
-    std::string line;
-    while (std::getline(in, line))
+
+    uint8_t hdr[24];
+    ZstdReader in(f);
+    if (!in.ReadBytes(hdr, sizeof(hdr)) || std::memcmp(hdr, "TXV1", 4) != 0)
     {
-      std::vector<std::string> params = SplitLine(line);
-      if (params.size() < 4)
-      {
-        continue;
-      }
-      WinRateData data;
-      int64_t key = ParseInt64(params[0]);
-      data.win = ParseInt64(params[1]);
-      data.tie = ParseInt64(params[2]);
-      data.total = ParseInt64(params[3]);
-      m[key] = data;
+      std::cout << path << ": bad or truncated header" << std::endl;
+      std::fclose(f);
+      return false;
     }
-    WinRateMap[n] = std::move(m);
+
+    int level = hdr[4];
+    uint64_t rows = 0, total = 0;
+    for (int i = 0; i < 8; i++)
+    {
+      rows |= (uint64_t)hdr[8 + i] << (8 * i);
+      total |= (uint64_t)hdr[16 + i] << (8 * i);
+    }
+    if (level != n || total == 0 || total > 0xffffffffULL || rows == 0 || rows > 200000000ULL)
+    {
+      std::cout << path << ": level " << level << " rows " << rows << " total " << total
+                << " is invalid" << std::endl;
+      std::fclose(f);
+      return false;
+    }
+    if (total != (uint64_t)WinRateTotal(n))
+    {
+      std::cout << path << ": total " << total << " does not match the derived "
+                << WinRateTotal(n) << std::endl;
+      std::fclose(f);
+      return false;
+    }
+
+    WinRateTable t;
+    t.total = (uint32_t)total;
+    t.keys.resize((size_t)rows);
+    t.win.resize((size_t)rows);
+    t.tie.resize((size_t)rows);
+
+    int64_t prev = 0;
+    for (uint64_t i = 0; i < rows; i++)
+    {
+      uint64_t gap = 0;
+      if (!in.ReadUvarint(gap))
+      {
+        std::cout << path << ": truncated at key row " << i << std::endl;
+        std::fclose(f);
+        return false;
+      }
+      int64_t key = prev + (int64_t)gap;
+      if (key <= prev)
+      {
+        std::cout << path << ": key row " << i << " is not increasing" << std::endl;
+        std::fclose(f);
+        return false;
+      }
+      t.keys[(size_t)i] = key;
+      prev = key;
+    }
+    for (uint64_t i = 0; i < rows; i++)
+    {
+      uint64_t w = 0;
+      if (!in.ReadUvarint(w) || w > total)
+      {
+        std::cout << path << ": win row " << i << " is inconsistent" << std::endl;
+        std::fclose(f);
+        return false;
+      }
+      t.win[(size_t)i] = (uint32_t)w;
+    }
+    for (uint64_t i = 0; i < rows; i++)
+    {
+      uint64_t ti = 0;
+      if (!in.ReadUvarint(ti) || (uint64_t)t.win[(size_t)i] + ti > total)
+      {
+        std::cout << path << ": tie row " << i << " is inconsistent" << std::endl;
+        std::fclose(f);
+        return false;
+      }
+      t.tie[(size_t)i] = (uint32_t)ti;
+    }
+    std::fclose(f);
+    WinRateMap[n] = std::move(t);
     return true;
   }
 
-  bool IsWinRateLoaded() { return !WinRateMap[0].empty(); }
+  bool IsWinRateLoaded() { return WinRateMap[0].size() != 0; }
 
   void CheckPoke(int poke)
   {
@@ -1030,31 +1459,40 @@ namespace texas_algorithm
     {
       throw std::invalid_argument("无法识别的牌: 手牌必须为 2 张，公牌最多 5 张");
     }
-    if (pub.size() >= 3)
-    {
-      int64_t win = 0, tie = 0, loss = 0;
-      EquityExact(hand, pub, win, tie, loss);
-      int64_t total = win + tie + loss;
-      if (total == 0)
-      {
-        throw std::invalid_argument("缺少胜率表数据");
-      }
-      return (float)((double)(2 * win + tie) / (double)(2 * total));
-    }
-    const auto &m = WinRateMap[pub.size()];
-    if (m.empty())
-    {
-      throw std::invalid_argument("缺少胜率表数据");
-    }
+    // The answer comes from the first source available for that level:
+    //   1. the in-memory table (all six levels can be loaded, 0..3 by default);
+    //   2. the packed SQLite database opened by LoadSqlite;
+    //   3. on-the-fly enumeration.
+    // Levels 4 and 5 keep the enumeration path by default on purpose: the
+    // tables would grow to 14.0M and 123M rows while the enumeration already
+    // runs in milliseconds and microseconds. See README "Why N >= 4 still
+    // enumerates by default".
     std::vector<int> cards;
     cards.insert(cards.end(), hand.begin(), hand.end());
     cards.insert(cards.end(), pub.begin(), pub.end());
-    auto it = m.find(CanonKey(cards, 2));
-    if (it == m.end() || it->second.total == 0)
+    uint32_t win = 0, tie = 0, total = 0;
+    if (WinRateMap[pub.size()].Find(CanonKey(cards, 2), win, tie, total) && total != 0)
+    {
+      return (float)((double)(2 * win + tie) / (double)(2 * total));
+    }
+#if TEXAS_HAVE_SQLITE
+    if (SqliteCounts((int)pub.size(), cards, 2, win, tie))
+    {
+      uint32_t dbTotal = WinRateTotal((int)pub.size());
+      if (dbTotal != 0)
+      {
+        return (float)((double)(2 * win + tie) / (double)(2 * dbTotal));
+      }
+    }
+#endif
+    int64_t ewin = 0, etie = 0, eloss = 0;
+    EquityExact(hand, pub, ewin, etie, eloss);
+    int64_t etotal = ewin + etie + eloss;
+    if (etotal == 0)
     {
       throw std::invalid_argument("缺少胜率表数据");
     }
-    return (float)((double)(2 * it->second.win + it->second.tie) / (double)(2 * it->second.total));
+    return (float)((double)(2 * ewin + etie) / (double)(2 * etotal));
   }
 
   float GetHandProbabilityStr(const std::string &hand, const std::string &pub)

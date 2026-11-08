@@ -18,7 +18,7 @@ Thumbs.db
 .settings/
 .vscode/
 
-# Data tables: the 9 runtime files are committed at the repo root (see README "Data Package").
+# Data tables: the runtime files are committed at the repo root (see README "Data Package").
 # Generator intermediates and per-language copies stay untracked.
 texas_data*.txt
 !texas_data_color.txt
@@ -27,11 +27,18 @@ texas_data*.txt
 !texas_data_extra_color_6.txt
 !texas_data_extra_normal_5.txt
 !texas_data_extra_normal_6.txt
-!texas_data_winrate_0.txt
-!texas_data_winrate_1.txt
-!texas_data_winrate_2.txt
+# The packed SQLite database is about 2.3 GiB (roughly 50 times the zstd files),
+# so it is generated locally with go/cmd/packsqlite or attached to a release
+# instead of being committed.
+texas_data_winrate.db
+texas_data_winrate.db.tmp
+texas_data*.bin
+master_winrate_*.bin
+cmp_*.bin
+cmp_*.bin.gz
 hand*/
 genrate.ckpt*
+*.ckpt
 
 # Go build output
 go/texas_algorithm

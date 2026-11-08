@@ -3,6 +3,7 @@ package texas_algorithm
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -15,14 +16,24 @@ var (
 	probDataAvailable = false
 )
 
-func TestMain(m *testing.M) {
+// dataDir is the directory the tests read the tables from. The data files are
+// committed once at the repo root, not copied into each language directory, so
+// `go test` (which runs in go/) falls back to the parent directory.
+func dataDir() string {
 	if fileExists("texas_data_color.txt") {
-		Load()
+		return "."
+	}
+	return ".."
+}
+
+func TestMain(m *testing.M) {
+	if fileExists(filepath.Join(dataDir(), "texas_data_color.txt")) {
+		LoadDir(dataDir())
 		dataAvailable = IsLoaded()
 	}
 
-	if fileExists("texas_data_winrate_0.txt") {
-		LoadProbility()
+	if fileExists(filepath.Join(dataDir(), "texas_data_winrate_0.zst")) {
+		LoadProbilityDir(dataDir())
 		probDataAvailable = IsProbabilityLoaded()
 	}
 
