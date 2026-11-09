@@ -48,7 +48,7 @@
         <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>aircompressor</artifactId>
-            <version>0.27</version>
+            <version>2.0.3</version>
         </dependency>
         <!-- SQLite JDBC for the on-demand packed-database mode. It bundles the
              native SQLite library for every supported platform, so the jar grows
